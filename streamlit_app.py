@@ -1,4 +1,4 @@
-import streamlit as stMore actions
+import streamlit as st
 
 # Título da página
 st.title("Consultar SKU")
