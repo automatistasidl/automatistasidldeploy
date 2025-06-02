@@ -175,11 +175,12 @@ if selecao == "Cadastro Bulto":
                 if st.button(categoria, key=f"btn_{categoria}", help=f"Selecionar {categoria}", use_container_width=True):
                     st.session_state["categoria_selecionada"] = categoria
                     st.success(f"Categoria '{categoria}' selecionada!")
+
+        components.html(html_code, height=200)
+
         
         sku = st.text_input("Digite SKU para este bulto:", key=unique_key)
 
-        components.html(html_code, height=200)
-        
         if "ultimo_sku" not in st.session_state:
             st.session_state["ultimo_sku"] = ""
 
