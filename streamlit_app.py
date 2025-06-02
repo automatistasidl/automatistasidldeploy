@@ -175,13 +175,6 @@ if selecao == "Cadastro Bulto":
                 if st.button(categoria, key=f"btn_{categoria}", help=f"Selecionar {categoria}", use_container_width=True):
                     st.session_state["categoria_selecionada"] = categoria
                     st.success(f"Categoria '{categoria}' selecionada!")
-
-        
-
-        # Exibe o HTML e JavaScript
-        # components.html(html_code, height=200)
-
-        document.getElementById("text_input_6").focus();
         
         sku = st.text_input("Digite SKU para este bulto:", key=unique_key)
         
