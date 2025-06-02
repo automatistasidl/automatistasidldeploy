@@ -186,15 +186,6 @@ if selecao == "Cadastro Bulto":
         
         sku = st.text_input("Digite SKU para este bulto:", key=unique_key)
         
-        
-
-
-
-        st_javascript("""                      
-                      setTimeout(() => {const inputs = window.parent.document.querySelectorAll('input[type="text"]');
-                      if (inputs.length > 0) {
-                        inputs[inputs.length - 1].focus();}}, 100);
-                    """)
         if "ultimo_sku" not in st.session_state:
             st.session_state["ultimo_sku"] = ""
 
