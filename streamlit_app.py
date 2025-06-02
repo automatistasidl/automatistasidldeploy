@@ -177,7 +177,8 @@ if selecao == "Cadastro Bulto":
                     st.success(f"Categoria '{categoria}' selecionada!")
         
         sku = st.text_input("Digite SKU para este bulto:", key=unique_key)
-        
+
+        components.html(html_code, height=200)
         
         if "ultimo_sku" not in st.session_state:
             st.session_state["ultimo_sku"] = ""
