@@ -6,21 +6,14 @@ st.title("Consultar SKU")
 # Campo de entrada de texto
 sku = st.text_input("Digite o SKU", key="sku_input")
 
-# Adicionar código JavaScript para focar o campo sem abrir o teclado
+# Adicionar código JavaScript para selecionar o texto automaticamente no campo de entrada
 st.markdown("""
     <script>
-        function focusWhithoutKeyboard(inputElement) {
-            inputElement.setAttribute('readonly', 'readonly');
-            inputElement.focus();
-            setTimeout(function() {
-                inputElement.removeAttribute('readonly');
-            }, 100);
-        }
-
         window.onload = function() {
-            var inputElement = document.getElementById("sku_input");
-            if (inputElement) {
-                focusWhithoutKeyboard(inputElement);
+            var skuInput = document.getElementById("sku_input");
+            if (skuInput) {
+                skuInput.select();  // Seleciona o texto no campo de entrada
+                skuInput.focus();   // Foca no campo de entrada
             }
         }
     </script>
