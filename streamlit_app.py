@@ -137,17 +137,29 @@ if selecao == "Cadastro Bulto":
         """, unsafe_allow_html=True)
 
         categorias = ["Ubicação", "Limpeza", "Tara Maior", "Costura", "Reetiquetagem"]
-        if "categoria_selecionada" not in st.session_state:
-            st.session_state["categoria_selecionada"] = None
+if "categoria_selecionada" not in st.session_state:
+    st.session_state["categoria_selecionada"] = None
 
-        st.markdown("<h3 style='color:white;'>Escolha uma categoria:</h3>", unsafe_allow_html=True)
-        col1, col2, col3 = st.columns(3)
-        for i, categoria in enumerate(categorias):
-            col = [col1, col2, col3][i % 3]
-            with col:
-                if st.button(categoria, key=f"btn_{categoria}", help=f"Selecionar {categoria}", use_container_width=True):
-                    st.session_state["categoria_selecionada"] = categoria
-                    st.success(f"Categoria '{categoria}' selecionada!")
+st.markdown("<h3 style='color:white;'>Escolha uma categoria:</h3>", unsafe_allow_html=True)
+col1, col2, col3 = st.columns(3)
+
+# Adiciona a lógica de botão e foco no SKU
+for i, categoria in enumerate(categorias):
+    col = [col1, col2, col3][i % 3]
+    with col:
+        if st.button(categoria, key=f"btn_{categoria}", help=f"Selecionar {categoria}", use_container_width=True):
+            st.session_state["categoria_selecionada"] = categoria
+            st.success(f"Categoria '{categoria}' selecionada!")
+
+            # Focar no campo de SKU depois de selecionar a categoria
+            st_javascript("""
+                setTimeout(() => {
+                    const sku_input = window.parent.document.querySelector('input[type="text"]');
+                    if (sku_input) {
+                        sku_input.focus();
+                    }
+                }, 100);
+            """)
 
         sku = st.text_input("Digite SKU para este bulto:", key=unique_key)
         st_javascript("""                      
