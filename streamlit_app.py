@@ -21,7 +21,7 @@ html_code = """
     <html>
         <head>
             <style>
-                #text_input_6 {
+                #sku {
                     font-size: 20px;
                     color: #FF5733;
                     cursor: pointer;
@@ -29,16 +29,17 @@ html_code = """
             </style>
         </head>
         <body>
+            <input id="sku" type="text" value="" placeholder="Digite o SKU" />
+
             <script>
                 // Focar no campo de entrada de SKU após o carregamento da página
                 window.onload = function() {
-                    document.getElementById("text_input_6").focus();
+                    document.getElementById("sku").focus();
                 };
             </script>
         </body>
     </html>
 """
-
 def hora_brasil():
     fuso_brasil = pytz.timezone('America/Sao_Paulo')
     return datetime.now(fuso_brasil).strftime("%d/%m/%Y %H:%M:%S")
@@ -177,9 +178,6 @@ if selecao == "Cadastro Bulto":
                     st.success(f"Categoria '{categoria}' selecionada!")
 
         components.html(html_code, height=200)
-
-        
-        sku = st.text_input("Digite SKU para este bulto:", key=unique_key)
 
         if "ultimo_sku" not in st.session_state:
             st.session_state["ultimo_sku"] = ""
