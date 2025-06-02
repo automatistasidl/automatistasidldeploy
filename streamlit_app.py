@@ -30,16 +30,20 @@ html_code = """
         </head>
         <body>
             <input id="sku" type="text" value="" placeholder="Digite o SKU" />
+            <button onclick="sendValue()">Enviar SKU</button>
 
             <script>
-                // Focar no campo de entrada de SKU após o carregamento da página
-                window.onload = function() {
-                    document.getElementById("sku").focus();
-                };
+                // Enviar o valor do campo SKU de volta para o Streamlit
+                function sendValue() {
+                    const skuValue = document.getElementById("sku").value;
+                    // Envia o valor do SKU via Streamlit
+                    window.parent.postMessage({type: 'set_value', value: skuValue}, '*');
+                }
             </script>
         </body>
     </html>
 """
+
 def hora_brasil():
     fuso_brasil = pytz.timezone('America/Sao_Paulo')
     return datetime.now(fuso_brasil).strftime("%d/%m/%Y %H:%M:%S")
@@ -179,6 +183,15 @@ if selecao == "Cadastro Bulto":
 
         components.html(html_code, height=200)
 
+        # Captura o valor enviado de volta
+        value = st.experimental_get_query_params().get("sku", [""])[0]
+
+        # Condicional para exibir o valor capturado
+        if value:
+            st.write(f"Você digitou: {value}")
+        else:
+            st.write("Digite um SKU")
+    
         if "ultimo_sku" not in st.session_state:
             st.session_state["ultimo_sku"] = ""
 
