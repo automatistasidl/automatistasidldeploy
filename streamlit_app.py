@@ -17,30 +17,27 @@ import streamlit.components.v1 as components
 unique_key = "peca_sku"
 
 # Inserir HTML com JavaScript para focar no campo de entrada de SKU
-html_code = f"""
+html_code = """
     <html>
         <head>
             <style>
-                #{unique_key} {{
+                #text_input_6 {
                     font-size: 20px;
                     color: #FF5733;
                     cursor: pointer;
-                }}
+                }
             </style>
         </head>
         <body>
-            <input id="{unique_key}" type="text" value="" placeholder="Digite o SKU" />
-
             <script>
                 // Focar no campo de entrada de SKU após o carregamento da página
-                window.onload = function() {{
-                    document.getElementById("{unique_key}").focus();
-                }};
+                window.onload = function() {
+                    document.getElementById("text_input_6").focus();
+                };
             </script>
         </body>
     </html>
 """
-
 
 def hora_brasil():
     fuso_brasil = pytz.timezone('America/Sao_Paulo')
@@ -182,9 +179,11 @@ if selecao == "Cadastro Bulto":
         
 
         # Exibe o HTML e JavaScript
-        components.html(html_code, height=200)
+        # components.html(html_code, height=200)
 
+        document.getElementById("text_input_6").focus();
         
+        sku = st.text_input("Digite SKU para este bulto:", key=unique_key)
         
         
         if "ultimo_sku" not in st.session_state:
