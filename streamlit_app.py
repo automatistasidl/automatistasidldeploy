@@ -1,5 +1,4 @@
 import streamlit as st
-import streamlit.components.v1 as components
 
 # Título da página
 st.title("Consultar SKU")
@@ -8,13 +7,15 @@ st.title("Consultar SKU")
 sku = st.text_input("Digite o SKU", key="sku_input")
 
 # Inserir o código HTML + JavaScript para foco automático
-components.html("""
+st.markdown("""
     <script>
         window.onload = function() {
-            document.getElementById("sku_input").focus();
+            setTimeout(function() {
+                document.getElementById("sku_input").focus();
+            }, 100);  // Atraso de 100ms para garantir que o campo esteja renderizado
         }
     </script>
-""", height=0)
+""", unsafe_allow_html=True)
 
 # Mostrar o valor digitado
 if sku:
