@@ -1,6 +1,20 @@
 import streamlit as st
 
-st.title("🎈 My new app")
-st.write(
-    "Let's start building! For help and inspiration, head over to [docs.streamlit.io](https://docs.streamlit.io/)."
-)
+# Definir o título da página
+st.title("Consultar SKU")
+
+# Injetar o JavaScript para dar foco ao campo de input
+st.markdown("""
+    <script>
+        window.onload = function() {
+            document.getElementById('sku_input').focus();
+        }
+    </script>
+""", unsafe_allow_html=True)
+
+# Criar o campo de entrada de texto para SKU
+sku = st.text_input("Digite o SKU", key='sku_input')
+
+# Se o SKU for inserido, você pode exibir algo
+if sku:
+    st.write(f"Você digitou: {sku}")
