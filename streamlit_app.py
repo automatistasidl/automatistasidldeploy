@@ -1,22 +1,24 @@
 import streamlit as st
+import streamlit.components.v1 as components
 
-# Definir o título da página
+# Definir título
 st.title("Consultar SKU")
-
-# Adicionar o código JavaScript para forçar o foco
-st.markdown("""
-    <script>
-        window.addEventListener('load', function() {
-            setTimeout(function() {
-                document.getElementById("sku_input").focus();
-            }, 100);  // Atrasar o foco para garantir que o campo seja renderizado primeiro
-        });
-    </script>
-""", unsafe_allow_html=True)
 
 # Campo de entrada de texto
 sku = st.text_input("Digite o SKU", key="sku_input")
 
-# Mostrar o valor digitado
+# Código HTML + JS para focar o campo
+components.html("""
+    <script>
+        window.onload = function() {
+            var skuInput = document.getElementById("sku_input");
+            if (skuInput) {
+                skuInput.focus();
+            }
+        }
+    </script>
+""", height=0)
+
+# Mostrar valor digitado
 if sku:
     st.write(f"Você digitou: {sku}")
