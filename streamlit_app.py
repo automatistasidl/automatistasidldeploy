@@ -11,7 +11,7 @@ st.markdown("""
     <script>
         const sleep = (time) => new Promise((resolve) => setTimeout(resolve, time));
         window.onload = async function() {
-            await sleep(100);  // Aguarda um pouco para garantir que o input foi carregado
+            await sleep(500);  // Aguarda um pouco para garantir que o input foi carregado
             const input = window.parent.document.querySelector('input');
             if (input) {
                 input.focus();
