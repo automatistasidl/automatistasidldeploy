@@ -11,12 +11,12 @@ sku = st.text_input("Digite o SKU", key="sku_input")
 if sku:
     st.write(f"Você digitou: {sku}")
 
-# Inserir HTML com JavaScript para focar no elemento <span>
+# Inserir HTML com JavaScript para focar no campo de entrada de SKU
 html_code = """
     <html>
         <head>
             <style>
-                #something {
+                #sku_input {
                     font-size: 20px;
                     color: #FF5733;
                     cursor: pointer;
@@ -24,12 +24,12 @@ html_code = """
             </style>
         </head>
         <body>
-            <span id="something" tabindex="0">Something</span>
+            <input id="sku_input" type="text" value="" placeholder="Digite o SKU" />
 
             <script>
-                // Focar no elemento após o carregamento da página
+                // Focar no campo de entrada de SKU após o carregamento da página
                 window.onload = function() {
-                    document.getElementById("something").focus();
+                    document.getElementById("sku_input").focus();
                 };
             </script>
         </body>
