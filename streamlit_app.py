@@ -1,16 +1,17 @@
 import streamlit as st
+import streamlit.components.v1 as components
 
 # Definir o título
 st.title("Consultar SKU")
 
-# Script JavaScript para dar foco ao campo
-st.markdown("""
+# HTML + JS para foco no campo
+components.html("""
     <script>
-    document.addEventListener("DOMContentLoaded", function() {
-        document.getElementById("sku_input").focus();
-    });
+        document.addEventListener("DOMContentLoaded", function() {
+            document.getElementById("sku_input").focus();
+        });
     </script>
-""", unsafe_allow_html=True)
+""", height=0)
 
 # Campo de entrada de texto
 sku = st.text_input("Digite o SKU", key="sku_input")
