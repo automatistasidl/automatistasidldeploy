@@ -1,7 +1,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-# Inserir HTML com JavaScript para focar no campo de entrada de SKU e capturar o código após pressionar Enter (ou scanner)
+# Inserir HTML com JavaScript para focar no campo de entrada de SKU e capturar a leitura completa do scanner
 html_code = """
     <html>
         <head>
@@ -22,12 +22,17 @@ html_code = """
                     document.getElementById("sku_input").focus();
                 };
 
-                // Capturar o valor quando o scanner ou o usuário pressionar "Enter"
+                let timer;
+
+                // Detecta a alteração no input e verifica se o scanner terminou de ler
                 document.getElementById("sku_input").addEventListener("input", function() {
-                    var skuValue = document.getElementById("sku_input").value;
-                    if (skuValue.trim() !== "") {
-                        alert("Você digitou: " + skuValue);
-                    }
+                    clearTimeout(timer);  // Limpa o timer anterior
+                    timer = setTimeout(function() {
+                        var skuValue = document.getElementById("sku_input").value;
+                        if (skuValue.trim() !== "") {
+                            alert("Você digitou: " + skuValue);
+                        }
+                    }, 500);  // Aguarda 500ms para verificar se o scanner terminou de enviar o código
                 });
             </script>
         </body>
