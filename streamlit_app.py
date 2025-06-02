@@ -3,12 +3,12 @@ import streamlit as st
 # Definir o título
 st.title("Consultar SKU")
 
-# Usar JavaScript para dar foco automático
+# Script JavaScript para dar foco ao campo
 st.markdown("""
     <script>
-    window.onload = function() {
+    document.addEventListener("DOMContentLoaded", function() {
         document.getElementById("sku_input").focus();
-    }
+    });
     </script>
 """, unsafe_allow_html=True)
 
