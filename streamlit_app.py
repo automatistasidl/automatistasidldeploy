@@ -9,7 +9,6 @@ from datetime import datetime
 import io
 import smtplib
 from email.message import EmailMessage
-from datetime import datetime
 import pytz
 
 def hora_brasil():
@@ -25,7 +24,7 @@ st.set_page_config(layout="wide")
 
 # Página de boas-vindas
 if "inicio" not in st.session_state:
-    st.session_state["inicio"] = False      
+    st.session_state["inicio"] = False
 
 if not st.session_state["inicio"]:
     st.title("SISTEMA DE CONTROLE DE BACKSTOCK")
@@ -93,7 +92,7 @@ if selecao == "Home":
     st.rerun()
 
 # Página de cadastro de bultos
-if selecao == "Cadastro Bulto":
+elif selecao == "Cadastro Bulto":
     st.markdown("<h1 style='color:black;'>Cadastro de Bultos</h1>", unsafe_allow_html=True)
 
     if "bulto_numero" not in st.session_state:
@@ -137,36 +136,29 @@ if selecao == "Cadastro Bulto":
         """, unsafe_allow_html=True)
 
         categorias = ["Ubicação", "Limpeza", "Tara Maior", "Costura", "Reetiquetagem"]
-if "categoria_selecionada" not in st.session_state:
-    st.session_state["categoria_selecionada"] = None
+        if "categoria_selecionada" not in st.session_state:
+            st.session_state["categoria_selecionada"] = None
 
-st.markdown("<h3 style='color:white;'>Escolha uma categoria:</h3>", unsafe_allow_html=True)
-col1, col2, col3 = st.columns(3)
+        st.markdown("<h3 style='color:white;'>Escolha uma categoria:</h3>", unsafe_allow_html=True)
+        col1, col2, col3 = st.columns(3)
+        for i, categoria in enumerate(categorias):
+            col = [col1, col2, col3][i % 3]
+            with col:
+                if st.button(categoria, key=f"btn_{categoria}", help=f"Selecionar {categoria}", use_container_width=True):
+                    st.session_state["categoria_selecionada"] = categoria
+                    st.success(f"Categoria '{categoria}' selecionada!")
 
-# Adiciona a lógica de botão e foco no SKU
-for i, categoria in enumerate(categorias):
-    col = [col1, col2, col3][i % 3]
-    with col:
-        if st.button(categoria, key=f"btn_{categoria}", help=f"Selecionar {categoria}", use_container_width=True):
-            st.session_state["categoria_selecionada"] = categoria
-            st.success(f"Categoria '{categoria}' selecionada!")
-
-            # Focar no campo de SKU depois de selecionar a categoria
-            st_javascript("""
-                setTimeout(() => {
-                    const sku_input = window.parent.document.querySelector('input[type="text"]');
-                    if (sku_input) {
-                        sku_input.focus();
-                    }
-                }, 100);
-            """)
+                    # Focar no campo de SKU depois de selecionar a categoria
+                    st_javascript("""
+                        setTimeout(() => {
+                            const sku_input = window.parent.document.querySelector('input[type="text"]');
+                            if (sku_input) {
+                                sku_input.focus();
+                            }
+                        }, 100);
+                    """)
 
         sku = st.text_input("Digite SKU para este bulto:", key=unique_key)
-        st_javascript("""                      
-                      setTimeout(() => {const inputs = window.parent.document.querySelectorAll('input[type="text"]');
-                      if (inputs.length > 0) {
-                        inputs[inputs.length - 1].focus();}}, 100);
-                    """)
         if "ultimo_sku" not in st.session_state:
             st.session_state["ultimo_sku"] = ""
 
@@ -176,8 +168,6 @@ for i, categoria in enumerate(categorias):
             elif not st.session_state.get("categoria_selecionada"):
                 st.warning("Selecione uma categoria antes de cadastrar a peça.")
             else:
-               # horario_atual = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-                
                 novo_cadastro = {
                     "Usuário": st.session_state["user"],
                     "Bulto": st.session_state["bulto_numero"],
@@ -194,10 +184,9 @@ for i, categoria in enumerate(categorias):
         st.markdown("---")  # linha de separação opcional
         if st.button("✅ Finalizar Bulto", use_container_width=True):
             if st.session_state["cadastros"]:
-                # Filtrar apenas os cadastros do bulto atual
                 bulto_atual = st.session_state["bulto_numero"]
                 df_cadastros = pd.DataFrame([c for c in st.session_state["cadastros"] if c["Bulto"] == bulto_atual])
-            
+
                 if not df_cadastros.empty:
                     nome_arquivo = f"cadastro_bulto_{bulto_atual}_{datetime.now(pytz.timezone('America/Sao_Paulo')).strftime('%d-%m-%Y_%H-%M-%S')}.xlsx"
                     output = io.BytesIO()
@@ -213,91 +202,32 @@ for i, categoria in enumerate(categorias):
                         msg['Subject'] = f'Relatório - Bulto {bulto_atual}'
                         msg['From'] = remetente
                         msg['To'] = destinatario
-                        msg.set_content(f'Segue em anexo a planilha do bulto finalizado: {bulto_atual}')
-                        msg.add_attachment(dados_excel, maintype='application', subtype='vnd.openxmlformats-officedocument.spreadsheetml.sheet', filename=nome_arquivo)
+                        msg.set_content(f'O bulto {bulto_atual} foi finalizado com sucesso.')
+
+                        msg.add_attachment(dados_excel, maintype='application', subtype='octet-stream', filename=nome_arquivo)
 
                         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
                             smtp.login(remetente, senha)
                             smtp.send_message(msg)
 
-                        st.success("✅ Bulto finalizado e enviado com sucesso para o analista!")
+                        st.success(f"Finalização do bulto {bulto_atual} realizada com sucesso! Relatório enviado por email.")
                     except Exception as e:
-                        st.error(f"❌ Erro ao enviar planilha: {e}")
-                else:
-                    st.warning("⚠️ Nenhuma peça cadastrada neste bulto para envio.")
-            else:
-                st.warning("⚠️ Nenhuma peça cadastrada até o momento.")    
-            # Remover cadastros do bulto finalizado
-            st.session_state["cadastros"] = [c for c in st.session_state["cadastros"] if c["Bulto"] != bulto_atual]
+                        st.error(f"Erro ao enviar o email: {e}")
 
-            st.success("Bulto finalizado com sucesso!")
-            st.session_state["bulto_numero"] = ""
-            st.session_state["bulto_cadastrado"] = False
-            st.session_state["peca_reset_count"] = 0
-            st.rerun()
+                st.session_state["bulto_numero"] = ""
+                st.session_state["bulto_cadastrado"] = False
+                st.session_state["categoria_selecionada"] = None
+                st.session_state["peca_reset_count"] = 0
+                st.session_state["ultimo_sku"] = ""
+                st.session_state["cadastros"] = []
+                st.session_state["user"] = ""
+                st.rerun()
 
-
-# Tabela de peças cadastradas
+# Página da Tabela
 elif selecao == "Tabela":
     st.markdown("<h1 style='color:black;'>Tabela de Peças Cadastradas</h1>", unsafe_allow_html=True)
-
     if st.session_state["cadastros"]:
-        df_cadastros = pd.DataFrame(st.session_state["cadastros"])
-        st.dataframe(df_cadastros, use_container_width=True)
-        nome_arquivo = f"cadastro_bultos_{datetime.now(pytz.timezone('America/Sao_Paulo')).strftime('%d-%m-%Y_%H-%M-%S')}.xlsx"
-
-       # nome_arquivo = f"cadastro_bultos_{datetime.now().strftime('%d-%m-%Y_%H-%M-%S')}.xlsx"
-        output = io.BytesIO()
-        df_cadastros.to_excel(output, index=False, engine='xlsxwriter')
-        dados_excel = output.getvalue()
-
-        st.download_button(
-            label="📥 Baixar planilha Excel",
-            data=dados_excel,
-            file_name=nome_arquivo,
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-
-        if st.button("✉️ Enviar planilha para analista"):
-            try:
-                remetente = "automatistasidl@gmail.com"
-                senha = "ydlkjtswplqitwkf"
-                destinatario = "analista@idl.com"
-
-                msg = EmailMessage()
-                msg['Subject'] = 'Relatório de Cadastro de Bultos'
-                msg['From'] = remetente
-                msg['To'] = destinatario
-                msg.set_content('Segue em anexo a planilha de cadastro de bultos.')
-                msg.add_attachment(dados_excel, maintype='application', subtype='vnd.openxmlformats-officedocument.spreadsheetml.sheet', filename=nome_arquivo)
-
-                with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
-                    smtp.login(remetente, senha)
-                    smtp.send_message(msg)
-
-                st.success("✅ Planilha enviada com sucesso para o analista!")
-
-            except Exception as e:
-                st.error(f"❌ Erro ao enviar planilha: {e}")
+        df = pd.DataFrame(st.session_state["cadastros"])
+        st.dataframe(df)
     else:
         st.info("Nenhuma peça cadastrada até o momento.")
-
-# Rodapé
-st.markdown("""
-    <style>
-        .footer {
-            position: fixed;
-            bottom: 0;
-            right: 10px;
-            font-size: 12px;
-            text-align: right;
-            background-color: #9DD1F1;
-            color: black;
-            padding: 5px;
-            z-index: 100;
-        }
-    </style>
-    <div class="footer">
-        Copyright © 2025 Direitos Autorais Desenvolvedor Rogério Ferreira
-    </div>
-""", unsafe_allow_html=True)
