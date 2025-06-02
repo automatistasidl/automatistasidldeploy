@@ -1,25 +1,31 @@
 import streamlit as st
 
-# Título da página
-st.title("Consultar SKU")
+# Campo de entrada de texto
+sku = st.text_input("Digite o SKU", key="sku_input")
 
-# Campo de entrada
-sku = st.text_input("Digite o SKU", key='sku_input')
-
-# JavaScript para focar automaticamente no primeiro campo de input
-st.markdown("""
+# Script para focar o campo automaticamente
+st.markdown(
+    """
     <script>
-        const sleep = (time) => new Promise((resolve) => setTimeout(resolve, time));
+        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
         window.onload = async function() {
-            await sleep(500);  // Aguarda um pouco para garantir que o input foi carregado
-            const input = window.parent.document.querySelector('input');
-            if (input) {
-                input.focus();
+            await sleep(100);  // Aguarda a renderização
+            const inputElements = parent.document.querySelectorAll("input");
+            for (let input of inputElements) {
+                if (input.placeholder === "Digite o SKU") {
+                    input.focus();
+                    break;
+                }
             }
         }
     </script>
-""", unsafe_allow_html=True)
+    """,
+    unsafe_allow_html=True
+)
 
-# Exibir resultado se o SKU for digitado
+# Título da página
+st.title("Consultar SKU")
+
+# Mostrar valor digitado
 if sku:
     st.write(f"Você digitou: {sku}")
