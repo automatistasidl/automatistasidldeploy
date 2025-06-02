@@ -183,8 +183,9 @@ if selecao == "Cadastro Bulto":
 
         # Exibe o HTML e JavaScript
         components.html(html_code, height=200)
+
         
-        sku = st.text_input("Digite SKU para este bulto:", key=unique_key)
+        
         
         if "ultimo_sku" not in st.session_state:
             st.session_state["ultimo_sku"] = ""
