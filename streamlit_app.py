@@ -1,7 +1,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-# Inserir HTML com JavaScript para focar no campo de entrada de SKU e exibir o valor após pressionar Enter
+# Inserir HTML com JavaScript para focar no campo de entrada de SKU e capturar o código após pressionar Enter (ou scanner)
 html_code = """
     <html>
         <head>
@@ -22,10 +22,10 @@ html_code = """
                     document.getElementById("sku_input").focus();
                 };
 
-                // Exibir valor do SKU ao pressionar "Enter"
-                document.getElementById("sku_input").addEventListener("keypress", function(event) {
-                    if (event.key === "Enter") {
-                        var skuValue = document.getElementById("sku_input").value;
+                // Capturar o valor quando o scanner ou o usuário pressionar "Enter"
+                document.getElementById("sku_input").addEventListener("input", function() {
+                    var skuValue = document.getElementById("sku_input").value;
+                    if (skuValue.trim() !== "") {
                         alert("Você digitou: " + skuValue);
                     }
                 });
