@@ -8,7 +8,7 @@ sku = st.text_input("Digite o SKU", key="sku_input")
 
 # Adicionar código JavaScript para selecionar o texto automaticamente no campo de entrada
 st.markdown("""
-    <script>
+    <script type="text/javascript">
         window.onload = function() {
             var skuInput = document.getElementById("sku_input");
             if (skuInput) {
