@@ -14,7 +14,8 @@ if 'app_data' not in st.session_state:
         'skus': pd.DataFrame(columns=['Usuário', 'Bulto', 'SKU', 'Data/Hora']),
         'current_skus': [],
         'message': '',
-        'input_value': ''
+        'input_value': '',
+        'focus_trigger': 0  # Gatilho para focar no campo
     }
 
 # Funções auxiliares
@@ -38,8 +39,9 @@ def handle_input(value):
         st.session_state.app_data['current_skus'].append(value)
         st.session_state.app_data['message'] = f"SKU {value} adicionado"
     
-    # Limpa o input
+    # Limpa o campo e aciona o foco
     st.session_state.app_data['input_value'] = ''
+    st.session_state.app_data['focus_trigger'] += 1
 
 def finalize_bulto():
     if st.session_state.app_data['current_skus']:
@@ -59,6 +61,7 @@ def finalize_bulto():
         st.session_state.app_data['step'] = 2
         st.session_state.app_data['message'] = f"Bulto {st.session_state.app_data['bulto']} finalizado!"
         st.session_state.app_data['bulto'] = ''
+        st.session_state.app_data['focus_trigger'] += 1
 
 # Interface principal
 st.title("📦 Sistema de Registro de Bultos")
@@ -74,14 +77,13 @@ with st.expander("Progresso Atual", expanded=True):
         for sku in st.session_state.app_data['current_skus']:
             st.write(f"- {sku}")
 
-# Componente de entrada simplificado
+# Componente de entrada
 placeholders = {
     1: "Bipe o USUÁRIO e pressione Enter",
     2: "Bipe o BULTO e pressione Enter",
     3: "Bipe o SKU e pressione Enter"
 }
 
-# Campo de entrada com foco automático
 input_value = st.text_input(
     placeholders[st.session_state.app_data['step']],
     value=st.session_state.app_data['input_value'],
@@ -90,27 +92,53 @@ input_value = st.text_input(
     label_visibility='collapsed'
 )
 
-# Script para manter o foco no campo de entrada
-st.markdown("""
+# Script avançado para manter o foco
+focus_trigger = st.session_state.app_data['focus_trigger']
+st.markdown(f"""
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Foca no campo de entrada automaticamente
-    function focusInput() {
-        const input = document.querySelector('input[aria-label="main_input"]');
-        if (input) {
-            input.focus();
-            // Limpa o campo após atualização
-            input.value = '';
-        }
-    }
-    
-    // Foca no campo quando a página carrega
+// Gatilho para focar quando necessário
+const focusTrigger = {focus_trigger};
+
+function focusInput() {{
+    const input = document.querySelector('input[aria-label="main_input"]');
+    if (input) {{
+        input.focus();
+        
+        // Move o cursor para o final do texto
+        const value = input.value;
+        input.value = '';
+        input.value = value;
+    }}
+}}
+
+// Foca imediatamente se o campo estiver visível
+if (document.readyState === 'complete') {{
     focusInput();
-    
-    // Foca no campo quando ocorre uma mudança na página
-    const observer = new MutationObserver(focusInput);
-    observer.observe(document.body, { childList: true, subtree: true });
-});
+}} else {{
+    document.addEventListener('DOMContentLoaded', focusInput);
+}}
+
+// Observa mudanças no DOM para manter o foco
+const observer = new MutationObserver((mutations) => {{
+    mutations.forEach((mutation) => {{
+        if (!mutation.addedNodes) return;
+        focusInput();
+    }});
+}});
+
+observer.observe(document.body, {{
+    childList: true,
+    subtree: true,
+    attributes: false,
+    characterData: false
+}});
+
+// Foca quando a página ganha visibilidade
+document.addEventListener('visibilitychange', () => {{
+    if (document.visibilityState === 'visible') {{
+        focusInput();
+    }}
+}});
 </script>
 """, unsafe_allow_html=True)
 
