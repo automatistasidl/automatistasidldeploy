@@ -11,42 +11,21 @@ import smtplib
 from email.message import EmailMessage
 from datetime import datetime
 import pytz
-import streamlit.components.v1 as components
-
-# Definindo a chave única para o campo SKU
-unique_key = "peca_sku"
-
-# Inserir HTML com JavaScript para focar no campo de entrada de SKU
-html_code = """
-    <html>
-        <head>
-            <style>
-                #sku {
-                    font-size: 20px;
-                    color: #FF5733;
-                    cursor: pointer;
-                }
-            </style>
-        </head>
-        <body>
-            <input id="sku" type="text" value="" placeholder="Digite o SKU" />
-            <button onclick="sendValue()">Enviar SKU</button>
-
-            <script>
-                // Enviar o valor do campo SKU de volta para o Streamlit
-                function sendValue() {
-                    const skuValue = document.getElementById("sku").value;
-                    // Envia o valor do SKU via Streamlit
-                    window.parent.postMessage({type: 'set_value', value: skuValue}, '*');
-                }
-            </script>
-        </body>
-    </html>
-"""
 
 def hora_brasil():
     fuso_brasil = pytz.timezone('America/Sao_Paulo')
     return datetime.now(fuso_brasil).strftime("%d/%m/%Y %H:%M:%S")
+
+# Função para focar em um campo de texto
+def focus_on_input():
+    st_javascript("""
+    setTimeout(() => {
+        const inputs = window.parent.document.querySelectorAll('input[type="text"]');
+        if (inputs.length > 0) {
+            inputs[inputs.length - 1].focus();
+        }
+    }, 100);
+    """)
 
 # Inicializar session_state
 if "cadastros" not in st.session_state:
@@ -88,6 +67,8 @@ if not st.session_state["user"]:
     """, unsafe_allow_html=True)
 
     user = st.text_input("Digite seu usuário:")
+    focus_on_input()  # Foco automático no campo de usuário
+    
     st.write(f"Usuário digitado: {user}")
 
     if user.strip():
@@ -144,6 +125,8 @@ if selecao == "Cadastro Bulto":
         """, unsafe_allow_html=True)
 
         bulto = st.text_input("Digite o número do bulto:")
+        focus_on_input()  # Foco automático no campo do bulto
+        
         if bulto:
             st.session_state["bulto_numero"] = bulto
             st.session_state["bulto_cadastrado"] = True
@@ -180,18 +163,15 @@ if selecao == "Cadastro Bulto":
                 if st.button(categoria, key=f"btn_{categoria}", help=f"Selecionar {categoria}", use_container_width=True):
                     st.session_state["categoria_selecionada"] = categoria
                     st.success(f"Categoria '{categoria}' selecionada!")
+                    st.rerun()
 
-        components.html(html_code, height=200)
-
-        # Captura o valor enviado de volta
-        value = st.experimental_get_query_params().get("sku", [""])[0]
-
-        # Condicional para exibir o valor capturado
-        if value:
-            st.write(f"Você digitou: {value}")
+        # Focar no campo SKU após selecionar categoria ou recarregar a página
+        if st.session_state.get("categoria_selecionada"):
+            sku = st.text_input("Digite SKU para este bulto:", key=unique_key)
+            focus_on_input()  # Foco automático no campo SKU
         else:
-            st.write("Digite um SKU")
-    
+            sku = st.text_input("Digite SKU para este bulto:", key=unique_key, disabled=True)
+
         if "ultimo_sku" not in st.session_state:
             st.session_state["ultimo_sku"] = ""
 
@@ -201,8 +181,6 @@ if selecao == "Cadastro Bulto":
             elif not st.session_state.get("categoria_selecionada"):
                 st.warning("Selecione uma categoria antes de cadastrar a peça.")
             else:
-               # horario_atual = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-                
                 novo_cadastro = {
                     "Usuário": st.session_state["user"],
                     "Bulto": st.session_state["bulto_numero"],
@@ -271,7 +249,6 @@ elif selecao == "Tabela":
         st.dataframe(df_cadastros, use_container_width=True)
         nome_arquivo = f"cadastro_bultos_{datetime.now(pytz.timezone('America/Sao_Paulo')).strftime('%d-%m-%Y_%H-%M-%S')}.xlsx"
 
-       # nome_arquivo = f"cadastro_bultos_{datetime.now().strftime('%d-%m-%Y_%H-%M-%S')}.xlsx"
         output = io.BytesIO()
         df_cadastros.to_excel(output, index=False, engine='xlsxwriter')
         dados_excel = output.getvalue()
