@@ -5,18 +5,29 @@ from datetime import datetime
 # Inicializa a tabela no session_state
 if 'skus' not in st.session_state:
     st.session_state.skus = pd.DataFrame(columns=['SKU', 'Data/Hora'])
+if 'clear_input' not in st.session_state:
+    st.session_state.clear_input = False
 
-# Usamos um formulário para capturar o input e limpar o campo
-with st.form(key='sku_form'):
-    sku_input = st.text_input(
+# Cria um container para o input
+input_container = st.empty()
+
+# Lógica para limpar o input quando necessário
+if st.session_state.clear_input:
+    sku_input = input_container.text_input(
+        "Digite o SKU e pressione Enter", 
+        placeholder="Ex: ABC12345",
+        key="sku_input_clear"
+    )
+    st.session_state.clear_input = False
+else:
+    sku_input = input_container.text_input(
         "Digite o SKU e pressione Enter", 
         placeholder="Ex: ABC12345",
         key="sku_input"
     )
-    submit_button = st.form_submit_button("Adicionar")
 
-# Quando o formulário é submetido
-if submit_button and sku_input:
+# Quando Enter é pressionado no campo de texto
+if sku_input:
     # Adiciona à tabela
     new_row = pd.DataFrame({
         'SKU': [sku_input],
@@ -24,7 +35,9 @@ if submit_button and sku_input:
     })
     st.session_state.skus = pd.concat([st.session_state.skus, new_row], ignore_index=True)
     
-    # Não precisamos limpar manualmente, o formulário já faz isso
+    # Marca para limpar o input na próxima renderização
+    st.session_state.clear_input = True
+    st.rerun()
 
 # Exibe a tabela de SKUs
 if not st.session_state.skus.empty:
@@ -44,4 +57,4 @@ if not st.session_state.skus.empty:
         st.session_state.skus = pd.DataFrame(columns=['SKU', 'Data/Hora'])
         st.rerun()
 else:
-    st.info("Nenhum SKU registrado ainda. Digite um SKU acima e pressione o botão 'Adicionar'.")
+    st.info("Nenhum SKU registrado ainda. Digite um SKU acima e pressione Enter.")
