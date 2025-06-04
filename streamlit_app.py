@@ -2,7 +2,10 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import streamlit.components.v1 as components
-import json
+import time
+
+# Configuração da página
+st.set_page_config(page_title="Registro de SKUs", page_icon="📦", layout="centered")
 
 # Inicializa a tabela no session_state
 if 'skus' not in st.session_state:
@@ -11,63 +14,102 @@ if 'skus' not in st.session_state:
 # Função para adicionar SKU
 def add_sku(sku):
     if sku:  # Só adiciona se não for vazio
+        # Validação simples do SKU (pode ser personalizada)
+        if len(sku) < 3:
+            st.session_state.last_sku_status = "error"
+            st.session_state.last_sku_message = "SKU muito curto (mín. 3 caracteres)"
+            return False
+        
         new_row = pd.DataFrame({
-            'SKU': [sku],
+            'SKU': [sku.upper()],  # Converte para maiúsculas
             'Data/Hora': [datetime.now().strftime('%d/%m/%Y %H:%M:%S')]
         })
         st.session_state.skus = pd.concat([st.session_state.skus, new_row], ignore_index=True)
+        st.session_state.last_sku_status = "success"
+        st.session_state.last_sku_message = f"SKU {sku} adicionado com sucesso!"
+        return True
+    return False
 
-# Componente HTML/JS com comunicação correta
+# Componente HTML/JS com foco automático
 html_code = """
 <div style="text-align: center; margin-bottom: 20px;">
     <h3 style="color: #333;">Digite o SKU e pressione Enter</h3>
-    <input id="sku_input" type="text" placeholder="Ex: ABC12345" 
+    <input id="sku_input" type="text" placeholder="Ex: ABC12345" autofocus
            style="font-size: 18px; padding: 12px 20px; width: 300px;
                   border: 2px solid #4a90e2; border-radius: 25px;
                   outline: none; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
                   text-align: center; display: block; margin: 0 auto;" />
+    <div id="status_message" style="height: 24px; margin-top: 8px;"></div>
 </div>
 
 <script>
-const input = document.getElementById('sku_input');
-input.focus();
+// Função para focar no input (redundante com autofocus, mas útil como fallback)
+function focusInput() {
+    const input = document.getElementById('sku_input');
+    input.focus();
+}
 
+// Verifica se há mensagem de status para exibir
+if (window.parent.stSessionState && window.parent.stSessionState.last_sku_message) {
+    const statusDiv = document.getElementById('status_message');
+    const status = window.parent.stSessionState.last_sku_status;
+    const message = window.parent.stSessionState.last_sku_message;
+    
+    statusDiv.textContent = message;
+    statusDiv.style.color = status === 'success' ? 'green' : 'red';
+    statusDiv.style.fontWeight = 'bold';
+    
+    // Limpa a mensagem após 3 segundos
+    setTimeout(() => {
+        statusDiv.textContent = '';
+        window.parent.stSessionState.last_sku_message = '';
+    }, 3000);
+}
+
+// Configura o listener para o evento Enter
+const input = document.getElementById('sku_input');
 input.addEventListener('keypress', function(e) {
     if (e.key === 'Enter') {
         const sku = this.value.trim();
         if (sku) {
-            // Método confiável para comunicação com Streamlit
-            const data = {
-                is_sku: true,
-                sku_value: sku
-            };
-            
-            // Envia os dados para o Python
-            parent.window.streamlitAPI.runScript(
-                {is_sku: true, sku_value: sku}
-            );
+            // Envia os dados para o Streamlit
+            window.parent.postMessage({
+                type: 'streamlit:setComponentValue',
+                value: sku
+            }, '*');
             
             // Limpa o campo e mantém o foco
             this.value = '';
-            setTimeout(() => input.focus(), 10);
+            setTimeout(focusInput, 10);
         }
     }
 });
+
+// Foca no input quando a página carrega
+document.addEventListener('DOMContentLoaded', focusInput);
+// Foca no input sempre que o componente é atualizado
+focusInput();
 </script>
 """
 
-# Cria um componente vazio que será atualizado
-placeholder = st.empty()
+# Título da aplicação
+st.title("📦 Sistema de Registro de SKUs")
+
+# Cria um placeholder para o componente
+input_placeholder = st.empty()
+status_placeholder = st.empty()
 
 # Exibe o componente HTML
-with placeholder:
-    components.html(html_code, height=150)
+with input_placeholder:
+    components.html(html_code, height=180)
 
 # Verifica se há dados recebidos
-if 'is_sku' in st.session_state and st.session_state.is_sku:
-    add_sku(st.session_state.sku_value)
-    st.session_state.is_sku = False
-    st.rerun()
+if 'streamlit:setComponentValue' in st.session_state:
+    sku = st.session_state['streamlit:setComponentValue']
+    if add_sku(sku):
+        st.rerun()
+    else:
+        st.rerun()
 
 # Exibe a tabela de SKUs
 if not st.session_state.skus.empty:
@@ -83,36 +125,24 @@ if not st.session_state.skus.empty:
         }
     )
     
-    if st.button("Limpar Todos os SKUs", type="primary"):
-        st.session_state.skus = pd.DataFrame(columns=['SKU', 'Data/Hora'])
-        st.rerun()
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Limpar Todos os SKUs", type="primary"):
+            st.session_state.skus = pd.DataFrame(columns=['SKU', 'Data/Hora'])
+            st.session_state.last_sku_status = "info"
+            st.session_state.last_sku_message = "Todos os SKUs foram removidos"
+            st.rerun()
+    with col2:
+        if st.button("Exportar para CSV"):
+            csv = st.session_state.skus.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="Baixar CSV",
+                data=csv,
+                file_name='skus_registrados.csv',
+                mime='text/csv'
+            )
 else:
     st.info("Nenhum SKU registrado ainda. Digite um SKU acima e pressione Enter.")
 
-# JavaScript communication handler
-components.html("""
-<script>
-// Função para o Streamlit capturar os eventos
-function handleEnter(event) {
-    if (event.key === 'Enter') {
-        const input = event.target;
-        const sku = input.value.trim();
-        if (sku) {
-            window.parent.postMessage({
-                type: 'streamlit:setComponentValue',
-                value: sku
-            }, '*');
-            
-            input.value = '';
-            setTimeout(() => input.focus(), 10);
-        }
-    }
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    const input = document.getElementById('sku_input');
-    input.addEventListener('keypress', handleEnter);
-    input.focus();
-});
-</script>
-""", height=0)
+# Adiciona um pouco de espaço no final
+st.markdown("<br><br>", unsafe_allow_html=True)
