@@ -1,7 +1,7 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import pandas as pd
 from datetime import datetime
+import json
 
 # Inicializa a tabela no session_state
 if 'skus' not in st.session_state:
@@ -16,68 +16,57 @@ def add_sku(sku):
         })
         st.session_state.skus = pd.concat([st.session_state.skus, new_row], ignore_index=True)
 
-# Componente HTML/JS
-html_code = f"""
-<script>
-function sendSkuToPython(sku) {{
-    // Usa o Streamlit para enviar dados para o Python
-    parent.window.streamlitAPI.runScript({{
-        "is_sku": true,
-        "sku_value": sku
-    }});
-}}
-
-document.addEventListener('DOMContentLoaded', function() {{
-    const input = document.getElementById('sku_input');
-    input.focus();
-    
-    input.addEventListener('keypress', function(e) {{
-        if (e.key === 'Enter') {{
-            const sku = this.value.trim();
-            if (sku) {{
-                sendSkuToPython(sku);
-                this.value = '';
-                setTimeout(() => input.focus(), 50);  // Garante o foco
-            }}
-        }}
-    }});
-}});
-</script>
-
-<style>
-    #sku_input {{
-        font-size: 18px;
-        padding: 12px 20px;
-        width: 300px;
-        border: 2px solid #4a90e2;
-        border-radius: 25px;
-        outline: none;
-        transition: all 0.3s;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        text-align: center;
-        display: block;
-        margin: 0 auto;
-    }}
-    #sku_input:focus {{
-        border-color: #FF5733;
-        box-shadow: 0 0 8px rgba(255, 87, 51, 0.6);
-    }}
-</style>
-
+# Componente HTML/JS com comunicação correta
+html_code = """
 <div style="text-align: center; margin-bottom: 20px;">
     <h3 style="color: #333;">Digite o SKU e pressione Enter</h3>
-    <input id="sku_input" type="text" placeholder="Ex: ABC12345" />
+    <input id="sku_input" type="text" placeholder="Ex: ABC12345" 
+           style="font-size: 18px; padding: 12px 20px; width: 300px;
+                  border: 2px solid #4a90e2; border-radius: 25px;
+                  outline: none; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                  text-align: center; display: block; margin: 0 auto;" />
 </div>
+
+<script>
+const input = document.getElementById('sku_input');
+input.focus();
+
+input.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        const sku = this.value.trim();
+        if (sku) {
+            // Método confiável para comunicação com Streamlit
+            const data = {
+                is_sku: true,
+                sku_value: sku
+            };
+            
+            // Envia os dados para o Python
+            parent.window.streamlitAPI.runScript(
+                {is_sku: true, sku_value: sku}
+            );
+            
+            // Limpa o campo e mantém o foco
+            this.value = '';
+            setTimeout(() => input.focus(), 10);
+        }
+    }
+});
+</script>
 """
 
-# Exibe o componente
-components.html(html_code, height=150)
+# Cria um componente vazio que será atualizado
+placeholder = st.empty()
 
-# Processa os dados recebidos do JavaScript
-if 'is_sku' in st.query_params and 'sku_value' in st.query_params:
-    add_sku(st.query_params['sku_value'])
-    st.query_params.clear()  # Limpa os parâmetros
-    st.rerun()  # Atualiza a página para mostrar a tabela
+# Exibe o componente HTML
+with placeholder:
+    components.html(html_code, height=150)
+
+# Verifica se há dados recebidos
+if 'is_sku' in st.session_state and st.session_state.is_sku:
+    add_sku(st.session_state.sku_value)
+    st.session_state.is_sku = False
+    st.rerun()
 
 # Exibe a tabela de SKUs
 if not st.session_state.skus.empty:
@@ -93,27 +82,36 @@ if not st.session_state.skus.empty:
         }
     )
     
-    # Botão para limpar a tabela
     if st.button("Limpar Todos os SKUs", type="primary"):
         st.session_state.skus = pd.DataFrame(columns=['SKU', 'Data/Hora'])
         st.rerun()
 else:
     st.info("Nenhum SKU registrado ainda. Digite um SKU acima e pressione Enter.")
 
-# CSS adicional para melhorar a tabela
-st.markdown("""
-<style>
-    .stDataFrame [data-testid='stDataFrameContainer'] {
-        border: 1px solid #e1e4e8;
-        border-radius: 8px;
+# JavaScript communication handler
+components.html("""
+<script>
+// Função para o Streamlit capturar os eventos
+function handleEnter(event) {
+    if (event.key === 'Enter') {
+        const input = event.target;
+        const sku = input.value.trim();
+        if (sku) {
+            window.parent.postMessage({
+                type: 'streamlit:setComponentValue',
+                value: sku
+            }, '*');
+            
+            input.value = '';
+            setTimeout(() => input.focus(), 10);
+        }
     }
-    .stButton>button {
-        background-color: #FF5733;
-        color: white;
-        border: none;
-    }
-    .stButton>button:hover {
-        background-color: #E04B2D;
-    }
-</style>
-""", unsafe_allow_html=True)
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const input = document.getElementById('sku_input');
+    input.addEventListener('keypress', handleEnter);
+    input.focus();
+});
+</script>
+""", height=0)
