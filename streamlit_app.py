@@ -233,7 +233,7 @@ if selecao == "Cadastro Bulto":
         bulto = st.text_input("", 
                               key="bulto_input", 
                               placeholder="Digite o número do bulto...",
-                              max_chars=24)
+                              max_chars=40)
         auto_focus_input()
         
         # Validar bulto se foi digitado algo
@@ -294,7 +294,7 @@ if selecao == "Cadastro Bulto":
         sku = st.text_input("Digite o SKU (14 números):", 
                             key=unique_key, 
                             placeholder="Bipe o SKU e pressione Enter...",
-                            max_chars=14)
+                            max_chars=40)
         
         # Foco automático otimizado
         auto_focus_input()
