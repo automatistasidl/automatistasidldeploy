@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-import streamlit.components.v1 as components
 
 # Inicializa a tabela no session_state
 if 'skus' not in st.session_state:
