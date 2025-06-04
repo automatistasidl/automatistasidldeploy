@@ -36,8 +36,18 @@ input.addEventListener('keypress', function(e) {
     if (e.key === 'Enter') {
         const sku = this.value.trim();
         if (sku) {
-            // Envia o valor para o Streamlit
-            Streamlit.setComponentValue(sku);
+            // Método confiável para comunicação com Streamlit
+            const data = {
+                is_sku: true,
+                sku_value: sku
+            };
+            
+            // Envia os dados para o Python
+            parent.window.streamlitAPI.runScript(
+                {is_sku: true, sku_value: sku}
+            );
+            
+            // Limpa o campo e mantém o foco
             this.value = '';
             setTimeout(() => input.focus(), 10);
         }
@@ -46,16 +56,17 @@ input.addEventListener('keypress', function(e) {
 </script>
 """
 
-# Cria e renderiza o componente
-sku_input = components.html(
-    html_code, 
-    height=150, 
-    key="sku_input_component"
-)
+# Cria um componente vazio que será atualizado
+placeholder = st.empty()
 
-# Verifica se há novo SKU recebido
-if sku_input is not None:
-    add_sku(sku_input)
+# Exibe o componente HTML
+with placeholder:
+    components.html(html_code, height=150)
+
+# Verifica se há dados recebidos
+if 'is_sku' in st.session_state and st.session_state.is_sku:
+    add_sku(st.session_state.sku_value)
+    st.session_state.is_sku = False
     st.rerun()
 
 # Exibe a tabela de SKUs
@@ -77,3 +88,31 @@ if not st.session_state.skus.empty:
         st.rerun()
 else:
     st.info("Nenhum SKU registrado ainda. Digite um SKU acima e pressione Enter.")
+
+# JavaScript communication handler
+components.html("""
+<script>
+// Função para o Streamlit capturar os eventos
+function handleEnter(event) {
+    if (event.key === 'Enter') {
+        const input = event.target;
+        const sku = input.value.trim();
+        if (sku) {
+            window.parent.postMessage({
+                type: 'streamlit:setComponentValue',
+                value: sku
+            }, '*');
+            
+            input.value = '';
+            setTimeout(() => input.focus(), 10);
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const input = document.getElementById('sku_input');
+    input.addEventListener('keypress', handleEnter);
+    input.focus();
+});
+</script>
+""", height=0)
