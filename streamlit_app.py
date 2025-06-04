@@ -75,40 +75,52 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Componente JavaScript para foco automático com retentativa
+# Função para foco automático com identificação específica
 def auto_focus_input():
     components.html(f"""
     <script>
     function focusSkuInput() {{
+        // Encontrar o campo pelo placeholder específico
         const inputs = Array.from(window.parent.document.querySelectorAll('input[type="text"]'));
-        if (inputs.length > 0) {{
-            const lastInput = inputs[inputs.length - 1];
-            
+        const targetInput = inputs.find(input => 
+            input.placeholder === "Bipe o SKU e pressione Enter..." || 
+            input.placeholder === "Digite o número do bulto..." ||
+            input.placeholder === "Digite seu usuário:"
+        );
+        
+        if (targetInput) {{
             // Destacar visualmente o campo com foco
-            lastInput.classList.add('focused-input');
+            targetInput.classList.add('focused-input');
             
             // Focar e selecionar o conteúdo
-            lastInput.focus();
-            lastInput.select();
+            targetInput.focus();
+            targetInput.select();
             
             // Remover destaque quando o campo perde foco
-            lastInput.addEventListener('blur', () => {{
-                lastInput.classList.remove('focused-input');
+            targetInput.addEventListener('blur', () => {{
+                targetInput.classList.remove('focused-input');
             }});
         }}
     }}
     
-    // Tentar focar imediatamente
+    // Focar imediatamente
     focusSkuInput();
     
-    // Tentar novamente após 300ms (caso o campo ainda não esteja renderizado)
-    setTimeout(focusSkuInput, 300);
+    // Configurar um observador para quando o DOM for alterado
+    const observer = new MutationObserver((mutations) => {{
+        // Verificar se o campo de input foi adicionado
+        mutations.forEach((mutation) => {{
+            if (mutation.addedNodes.length) {{
+                focusSkuInput();
+            }}
+        }});
+    }});
     
-    // Tentar novamente após 800ms (para casos de conexão lenta)
-    setTimeout(focusSkuInput, 800);
-    
-    // Focar novamente quando a página ganhar foco
-    window.addEventListener('focus', focusSkuInput);
+    // Iniciar a observação
+    observer.observe(window.parent.document.body, {{
+        childList: true,
+        subtree: true
+    }});
     </script>
     """, height=0)
 
@@ -138,7 +150,7 @@ if not st.session_state["user"]:
     st.title("Cadastro Obrigatório para continuar o acesso")
     
     # Campo de usuário com foco automático
-    user = st.text_input("Digite seu usuário:", key="user_input")
+    user = st.text_input("Digite seu usuário:", key="user_input", placeholder="Digite seu usuário:")
     auto_focus_input()
     
     st.write(f"Usuário digitado: {user}")
