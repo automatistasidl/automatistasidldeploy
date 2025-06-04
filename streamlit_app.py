@@ -19,7 +19,9 @@ if 'app_data' not in st.session_state:
     }
 
 # Funções auxiliares
-def handle_input(value):
+def handle_input():
+    value = st.session_state.app_data['input_value']
+    
     if not value or len(value) < 3:
         st.session_state.app_data['message'] = "Mínimo 3 caracteres"
         return
@@ -61,6 +63,7 @@ def finalize_bulto():
         st.session_state.app_data['step'] = 2
         st.session_state.app_data['message'] = f"Bulto {st.session_state.app_data['bulto']} finalizado!"
         st.session_state.app_data['bulto'] = ''
+        st.session_state.app_data['input_value'] = ''
         st.session_state.app_data['focus_trigger'] += 1
 
 # Interface principal
@@ -84,59 +87,70 @@ placeholders = {
     3: "Bipe o SKU e pressione Enter"
 }
 
+# Campo de entrada com controle completo pelo session_state
 input_value = st.text_input(
     placeholders[st.session_state.app_data['step']],
     value=st.session_state.app_data['input_value'],
     key='main_input',
-    on_change=lambda: handle_input(st.session_state.main_input),
+    on_change=handle_input,
     label_visibility='collapsed'
 )
 
-# Script avançado para manter o foco
+# Atualiza o estado com o valor digitado (antes do Enter)
+if input_value != st.session_state.app_data['input_value']:
+    st.session_state.app_data['input_value'] = input_value
+    st.rerun()
+
+# Script avançado para manter o foco e limpar o campo
 focus_trigger = st.session_state.app_data['focus_trigger']
 st.markdown(f"""
 <script>
-// Gatilho para focar quando necessário
-const focusTrigger = {focus_trigger};
-
-function focusInput() {{
+// Foca e limpa o campo quando necessário
+function setupInputFocus() {{
     const input = document.querySelector('input[aria-label="main_input"]');
+    
     if (input) {{
+        // Foca no campo
         input.focus();
         
-        // Move o cursor para o final do texto
-        const value = input.value;
-        input.value = '';
-        input.value = value;
+        // Limpa o campo se estiver com valor
+        if (input.value && input.value.length > 0) {{
+            input.value = '';
+        }}
+        
+        // Configura evento para limpar campo quando ganha foco
+        input.addEventListener('focus', function() {{
+            if (this.value) {{
+                this.value = '';
+            }}
+        }});
     }}
 }}
 
-// Foca imediatamente se o campo estiver visível
+// Executa imediatamente se a página já carregou
 if (document.readyState === 'complete') {{
-    focusInput();
+    setupInputFocus();
 }} else {{
-    document.addEventListener('DOMContentLoaded', focusInput);
+    document.addEventListener('DOMContentLoaded', setupInputFocus);
 }}
 
 // Observa mudanças no DOM para manter o foco
 const observer = new MutationObserver((mutations) => {{
     mutations.forEach((mutation) => {{
         if (!mutation.addedNodes) return;
-        focusInput();
+        setupInputFocus();
     }});
 }});
 
 observer.observe(document.body, {{
     childList: true,
-    subtree: true,
-    attributes: false,
-    characterData: false
+    subtree: true
 }});
 
-// Foca quando a página ganha visibilidade
+// Força o foco quando a página ganha visibilidade
 document.addEventListener('visibilitychange', () => {{
     if (document.visibilityState === 'visible') {{
-        focusInput();
+        setupInputFocus();
     }}
 }});
 </script>
@@ -145,7 +159,7 @@ document.addEventListener('visibilitychange', () => {{
 # Exibe mensagens
 if st.session_state.app_data['message']:
     st.success(st.session_state.app_data['message'])
-    # Limpa a mensagem após 3 segundos
+    # Limpa a mensagem após exibição
     st.session_state.app_data['message'] = ''
 
 # Botão para finalizar bulto
