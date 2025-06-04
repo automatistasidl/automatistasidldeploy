@@ -1,123 +1,119 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
+from datetime import datetime
 
-# Inicializa a tabela no session_state se não existir
-if 'sku_table' not in st.session_state:
-    st.session_state.sku_table = pd.DataFrame(columns=['SKU'])
+# Inicializa a tabela no session_state
+if 'skus' not in st.session_state:
+    st.session_state.skus = pd.DataFrame(columns=['SKU', 'Data/Hora'])
 
-# HTML com CSS, JavaScript e lógica para capturar Enter
-html_code = """
-<html>
-    <head>
-        <style>
-            .input-container {
-                display: flex;
-                justify-content: center;
-                padding: 20px;
-            }
-            
-            #sku_input {
-                font-size: 18px;
-                padding: 12px 20px;
-                width: 300px;
-                border: 2px solid #4a90e2;
-                border-radius: 25px;
-                outline: none;
-                transition: all 0.3s ease;
-                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-                text-align: center;
-            }
-            
-            #sku_input:focus {
-                border-color: #FF5733;
-                box-shadow: 0 0 8px rgba(255, 87, 51, 0.6);
-                transform: scale(1.02);
-            }
-            
-            #sku_input::placeholder {
-                color: #aaa;
-                font-style: italic;
-            }
-            
-            body {
-                background-color: #f5f5f5;
-                font-family: 'Arial', sans-serif;
-            }
-            
-            .title {
-                text-align: center;
-                color: #333;
-                margin-bottom: 20px;
-                font-size: 24px;
-                font-weight: bold;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="title">Digite o SKU do produto</div>
-        <div class="input-container">
-            <input id="sku_input" type="text" value="" placeholder="Ex: ABC12345" />
-        </div>
+# Função para adicionar SKU
+def add_sku(sku):
+    if sku:  # Só adiciona se não for vazio
+        new_row = pd.DataFrame({
+            'SKU': [sku],
+            'Data/Hora': [datetime.now().strftime('%d/%m/%Y %H:%M:%S')]
+        })
+        st.session_state.skus = pd.concat([st.session_state.skus, new_row], ignore_index=True)
 
-        <script>
-            const input = document.getElementById("sku_input");
-            
-            // Focar no campo quando a página carregar
-            window.onload = function() {
-                input.focus();
-            };
-            
-            // Capturar tecla Enter
-            input.addEventListener("keypress", function(event) {
-                if (event.key === "Enter") {
-                    const skuValue = input.value.trim();
-                    if (skuValue) {
-                        // Enviar o valor para o Streamlit
-                        parent.window.streamlitAPI.runScript(
-                            {"data": skuValue, "isEnter": true}
-                        );
-                        
-                        // Limpar o campo e manter o foco
-                        input.value = '';
-                        input.focus();
-                    }
-                }
-            });
-            
-            // Opcional: Limpar placeholder quando em foco
-            input.addEventListener('focus', function() {
-                this.placeholder = '';
-            });
-            
-            input.addEventListener('blur', function() {
-                this.placeholder = 'Ex: ABC12345';
-            });
-        </script>
-    </body>
-</html>
+# Componente HTML/JS
+html_code = f"""
+<script>
+function sendSkuToPython(sku) {{
+    // Usa o Streamlit para enviar dados para o Python
+    parent.window.streamlitAPI.runScript({{
+        "is_sku": true,
+        "sku_value": sku
+    }});
+}}
+
+document.addEventListener('DOMContentLoaded', function() {{
+    const input = document.getElementById('sku_input');
+    input.focus();
+    
+    input.addEventListener('keypress', function(e) {{
+        if (e.key === 'Enter') {{
+            const sku = this.value.trim();
+            if (sku) {{
+                sendSkuToPython(sku);
+                this.value = '';
+                setTimeout(() => input.focus(), 50);  // Garante o foco
+            }}
+        }}
+    }});
+}});
+</script>
+
+<style>
+    #sku_input {{
+        font-size: 18px;
+        padding: 12px 20px;
+        width: 300px;
+        border: 2px solid #4a90e2;
+        border-radius: 25px;
+        outline: none;
+        transition: all 0.3s;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        text-align: center;
+        display: block;
+        margin: 0 auto;
+    }}
+    #sku_input:focus {{
+        border-color: #FF5733;
+        box-shadow: 0 0 8px rgba(255, 87, 51, 0.6);
+    }}
+</style>
+
+<div style="text-align: center; margin-bottom: 20px;">
+    <h3 style="color: #333;">Digite o SKU e pressione Enter</h3>
+    <input id="sku_input" type="text" placeholder="Ex: ABC12345" />
+</div>
 """
 
-# Função para adicionar SKU à tabela
-def add_sku(sku):
-    new_row = pd.DataFrame({'SKU': [sku]})
-    st.session_state.sku_table = pd.concat([st.session_state.sku_table, new_row], ignore_index=True)
+# Exibe o componente
+components.html(html_code, height=150)
 
-# Componente HTML
-components.html(html_code, height=200)
-
-# Se recebermos dados via JavaScript
-if st.experimental_get_query_params().get('isEnter'):
-    sku = st.experimental_get_query_params().get('data')[0]
-    add_sku(sku)
-    st.experimental_set_query_params()  # Limpa os parâmetros
+# Processa os dados recebidos do JavaScript
+if 'is_sku' in st.query_params and 'sku_value' in st.query_params:
+    add_sku(st.query_params['sku_value'])
+    st.query_params.clear()  # Limpa os parâmetros
+    st.rerun()  # Atualiza a página para mostrar a tabela
 
 # Exibe a tabela de SKUs
-if not st.session_state.sku_table.empty:
-    st.write("### SKUs Adicionados")
-    st.dataframe(st.session_state.sku_table, use_container_width=True)
+if not st.session_state.skus.empty:
+    st.write("### SKUs Registrados")
+    st.dataframe(
+        st.session_state.skus,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Data/Hora": st.column_config.DatetimeColumn(
+                format="DD/MM/YYYY HH:mm:ss"
+            )
+        }
+    )
     
     # Botão para limpar a tabela
-    if st.button("Limpar Tabela"):
-        st.session_state.sku_table = pd.DataFrame(columns=['SKU'])
+    if st.button("Limpar Todos os SKUs", type="primary"):
+        st.session_state.skus = pd.DataFrame(columns=['SKU', 'Data/Hora'])
         st.rerun()
+else:
+    st.info("Nenhum SKU registrado ainda. Digite um SKU acima e pressione Enter.")
+
+# CSS adicional para melhorar a tabela
+st.markdown("""
+<style>
+    .stDataFrame [data-testid='stDataFrameContainer'] {
+        border: 1px solid #e1e4e8;
+        border-radius: 8px;
+    }
+    .stButton>button {
+        background-color: #FF5733;
+        color: white;
+        border: none;
+    }
+    .stButton>button:hover {
+        background-color: #E04B2D;
+    }
+</style>
+""", unsafe_allow_html=True)
