@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import streamlit.components.v1 as components
-import json
 
 # Inicializa a tabela no session_state
 if 'skus' not in st.session_state:
@@ -32,22 +31,23 @@ html_code = """
 const input = document.getElementById('sku_input');
 input.focus();
 
+// Função para enviar o SKU para o Streamlit
+function sendSkuToStreamlit(sku) {
+    const data = {
+        sku: sku
+    };
+    window.parent.postMessage({
+        type: 'streamlit:setComponentValue',
+        apiversion: 1,
+        componentValue: JSON.stringify(data)
+    }, '*');
+}
+
 input.addEventListener('keypress', function(e) {
     if (e.key === 'Enter') {
         const sku = this.value.trim();
         if (sku) {
-            // Método confiável para comunicação com Streamlit
-            const data = {
-                is_sku: true,
-                sku_value: sku
-            };
-            
-            // Envia os dados para o Python
-            parent.window.streamlitAPI.runScript(
-                {is_sku: true, sku_value: sku}
-            );
-            
-            // Limpa o campo e mantém o foco
+            sendSkuToStreamlit(sku);
             this.value = '';
             setTimeout(() => input.focus(), 10);
         }
@@ -56,18 +56,18 @@ input.addEventListener('keypress', function(e) {
 </script>
 """
 
-# Cria um componente vazio que será atualizado
-placeholder = st.empty()
-
-# Exibe o componente HTML
-with placeholder:
-    components.html(html_code, height=150)
+# Cria um componente para capturar o valor
+sku_input = components.html(html_code, height=150, key="sku_input_component")
 
 # Verifica se há dados recebidos
-if 'is_sku' in st.session_state and st.session_state.is_sku:
-    add_sku(st.session_state.sku_value)
-    st.session_state.is_sku = False
-    st.rerun()
+if sku_input:
+    try:
+        data = json.loads(sku_input)
+        if 'sku' in data:
+            add_sku(data['sku'])
+            st.rerun()
+    except:
+        pass
 
 # Exibe a tabela de SKUs
 if not st.session_state.skus.empty:
@@ -88,31 +88,3 @@ if not st.session_state.skus.empty:
         st.rerun()
 else:
     st.info("Nenhum SKU registrado ainda. Digite um SKU acima e pressione Enter.")
-
-# JavaScript communication handler
-components.html("""
-<script>
-// Função para o Streamlit capturar os eventos
-function handleEnter(event) {
-    if (event.key === 'Enter') {
-        const input = event.target;
-        const sku = input.value.trim();
-        if (sku) {
-            window.parent.postMessage({
-                type: 'streamlit:setComponentValue',
-                value: sku
-            }, '*');
-            
-            input.value = '';
-            setTimeout(() => input.focus(), 10);
-        }
-    }
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    const input = document.getElementById('sku_input');
-    input.addEventListener('keypress', handleEnter);
-    input.focus();
-});
-</script>
-""", height=0)
