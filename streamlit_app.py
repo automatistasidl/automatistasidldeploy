@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import streamlit.components.v1 as components
+import json
 
 # Inicializa a tabela no session_state
 if 'skus' not in st.session_state:
@@ -31,23 +32,12 @@ html_code = """
 const input = document.getElementById('sku_input');
 input.focus();
 
-// Função para enviar o SKU para o Streamlit
-function sendSkuToStreamlit(sku) {
-    const data = {
-        sku: sku
-    };
-    window.parent.postMessage({
-        type: 'streamlit:setComponentValue',
-        apiversion: 1,
-        componentValue: JSON.stringify(data)
-    }, '*');
-}
-
 input.addEventListener('keypress', function(e) {
     if (e.key === 'Enter') {
         const sku = this.value.trim();
         if (sku) {
-            sendSkuToStreamlit(sku);
+            // Envia o valor para o Streamlit
+            Streamlit.setComponentValue(sku);
             this.value = '';
             setTimeout(() => input.focus(), 10);
         }
@@ -56,18 +46,17 @@ input.addEventListener('keypress', function(e) {
 </script>
 """
 
-# Cria um componente para capturar o valor
-sku_input = components.html(html_code, height=150, key="sku_input_component")
+# Cria e renderiza o componente
+sku_input = components.html(
+    html_code, 
+    height=150, 
+    key="sku_input_component"
+)
 
-# Verifica se há dados recebidos
-if sku_input:
-    try:
-        data = json.loads(sku_input)
-        if 'sku' in data:
-            add_sku(data['sku'])
-            st.rerun()
-    except:
-        pass
+# Verifica se há novo SKU recebido
+if sku_input is not None:
+    add_sku(sku_input)
+    st.rerun()
 
 # Exibe a tabela de SKUs
 if not st.session_state.skus.empty:
