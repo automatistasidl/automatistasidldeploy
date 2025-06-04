@@ -4,12 +4,11 @@ import pygsheets
 import os
 import datetime
 from streamlit_option_menu import option_menu
-from streamlit_javascript import st_javascript
+import streamlit.components.v1 as components
 from datetime import datetime
 import io
 import smtplib
 from email.message import EmailMessage
-from datetime import datetime
 import pytz
 
 def hora_brasil():
@@ -23,16 +22,29 @@ if "cadastros" not in st.session_state:
 # Configuração da página
 st.set_page_config(layout="wide")
 
-# Função para focar automaticamente nos campos de entrada
-def focus_input():
-    st_javascript("""
-    setTimeout(() => {
-        const inputs = window.parent.document.querySelectorAll('input[type="text"]');
+# Componente JavaScript para foco automático
+def auto_focus():
+    components.html("""
+    <script>
+    // Função para focar no último campo de texto
+    function focusLastInput() {
+        const inputs = Array.from(window.parent.document.querySelectorAll('input[type="text"]'));
         if (inputs.length > 0) {
             inputs[inputs.length - 1].focus();
         }
-    }, 100);
-    """)
+    }
+    
+    // Comunicação com o Streamlit
+    window.addEventListener('message', (event) => {
+        if (event.data.type === 'FOCUS_REQUEST') {
+            focusLastInput();
+        }
+    });
+    
+    // Solicitar foco inicial
+    window.parent.postMessage({type: 'FOCUS_REQUEST'}, '*');
+    </script>
+    """, height=0)
 
 # Página de boas-vindas
 if "inicio" not in st.session_state:
@@ -67,9 +79,10 @@ if not st.session_state["user"]:
     """, unsafe_allow_html=True)
 
     user = st.text_input("Digite seu usuário:")
-    focus_input()  # Foco automático no campo de usuário
-    
     st.write(f"Usuário digitado: {user}")
+    
+    # Ativar foco automático
+    auto_focus()
 
     if user.strip():
         st.session_state["user"] = user.strip()
@@ -125,7 +138,9 @@ if selecao == "Cadastro Bulto":
         """, unsafe_allow_html=True)
 
         bulto = st.text_input("Digite o número do bulto:")
-        focus_input()  # Foco automático no campo de bulto
+        
+        # Ativar foco automático
+        auto_focus()
         
         if bulto:
             st.session_state["bulto_numero"] = bulto
@@ -165,7 +180,9 @@ if selecao == "Cadastro Bulto":
                     st.success(f"Categoria '{categoria}' selecionada!")
 
         sku = st.text_input("Digite SKU para este bulto:", key=unique_key)
-        focus_input()  # Foco automático no campo de SKU
+        
+        # Ativar foco automático
+        auto_focus()
         
         if "ultimo_sku" not in st.session_state:
             st.session_state["ultimo_sku"] = ""
