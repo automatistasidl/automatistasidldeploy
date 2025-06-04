@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+import streamlit.components.v1 as components
 
 # Configuração da página
 st.set_page_config(page_title="Registro de Bultos", page_icon="📦", layout="centered")
@@ -13,21 +14,18 @@ if 'app_data' not in st.session_state:
         'bulto': '',
         'skus': pd.DataFrame(columns=['Usuário', 'Bulto', 'SKU', 'Data/Hora']),
         'current_skus': [],
-        'message': '',
-        'input_value': '',
-        'focus_trigger': 0  # Gatilho para focar no campo
+        'message': ''
     }
 
 # Funções auxiliares
-def handle_input():
-    value = st.session_state.app_data['input_value']
+def handle_input(value):
+    current_step = st.session_state.app_data['step']
     
     if not value or len(value) < 3:
         st.session_state.app_data['message'] = "Mínimo 3 caracteres"
         return
     
     value = value.upper()
-    current_step = st.session_state.app_data['step']
     
     if current_step == 1:
         st.session_state.app_data['user'] = value
@@ -40,10 +38,6 @@ def handle_input():
     elif current_step == 3:
         st.session_state.app_data['current_skus'].append(value)
         st.session_state.app_data['message'] = f"SKU {value} adicionado"
-    
-    # Limpa o campo e aciona o foco
-    st.session_state.app_data['input_value'] = ''
-    st.session_state.app_data['focus_trigger'] += 1
 
 def finalize_bulto():
     if st.session_state.app_data['current_skus']:
@@ -63,8 +57,69 @@ def finalize_bulto():
         st.session_state.app_data['step'] = 2
         st.session_state.app_data['message'] = f"Bulto {st.session_state.app_data['bulto']} finalizado!"
         st.session_state.app_data['bulto'] = ''
-        st.session_state.app_data['input_value'] = ''
-        st.session_state.app_data['focus_trigger'] += 1
+
+# Componente HTML/JS
+def get_input_component():
+    step = st.session_state.app_data['step']
+    message = st.session_state.app_data['message']
+    
+    placeholders = {
+        1: "Bipe o USUÁRIO e pressione Enter",
+        2: "Bipe o BULTO e pressione Enter",
+        3: "Bipe o SKU e pressione Enter"
+    }
+    
+    html = f"""
+    <div style="text-align: center; margin-bottom: 20px;">
+        <h3 style="color: #333;">{placeholders[step]}</h3>
+        <input id="main_input" type="text" autofocus
+               style="font-size: 18px; padding: 12px 20px; width: 300px;
+                      border: 2px solid #4a90e2; border-radius: 25px;
+                      outline: none; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                      text-align: center; display: block; margin: 0 auto;" />
+        <div id="message" style="height: 24px; margin-top: 8px; color: green; font-weight: bold;">
+            {message}
+        </div>
+    </div>
+
+    <script>
+    const input = document.getElementById("main_input");
+    
+    // Foco automático
+    function focusInput() {{
+        input.focus();
+    }}
+    
+    // Envia valor para o Streamlit
+    function sendValue(value) {{
+        window.parent.postMessage({{
+            type: 'FROM_FRAME',
+            data: value
+        }}, '*');
+    }}
+    
+    // Evento de tecla
+    input.addEventListener("keypress", function(e) {{
+        if (e.key === "Enter") {{
+            const value = this.value.trim();
+            if (value) {{
+                sendValue(value);
+                this.value = "";
+                setTimeout(focusInput, 10);
+            }}
+        }}
+    }});
+    
+    // Limpa mensagem após 3 segundos
+    setTimeout(() => {{
+        document.getElementById("message").textContent = "";
+    }}, 3000);
+    
+    // Foco inicial
+    focusInput();
+    </script>
+    """
+    return html
 
 # Interface principal
 st.title("📦 Sistema de Registro de Bultos")
@@ -81,91 +136,19 @@ with st.expander("Progresso Atual", expanded=True):
             st.write(f"- {sku}")
 
 # Componente de entrada
-placeholders = {
-    1: "Bipe o USUÁRIO e pressione Enter",
-    2: "Bipe o BULTO e pressione Enter",
-    3: "Bipe o SKU e pressione Enter"
-}
-
-# Campo de entrada com controle completo pelo session_state
-input_value = st.text_input(
-    placeholders[st.session_state.app_data['step']],
-    value=st.session_state.app_data['input_value'],
-    key='main_input',
-    on_change=handle_input,
-    label_visibility='collapsed'
-)
-
-# Atualiza o estado com o valor digitado (antes do Enter)
-if input_value != st.session_state.app_data['input_value']:
-    st.session_state.app_data['input_value'] = input_value
-    st.rerun()
-
-# Script avançado para manter o foco e limpar o campo
-focus_trigger = st.session_state.app_data['focus_trigger']
-st.markdown(f"""
-<script>
-// Foca e limpa o campo quando necessário
-function setupInputFocus() {{
-    const input = document.querySelector('input[aria-label="main_input"]');
-    
-    if (input) {{
-        // Foca no campo
-        input.focus();
-        
-        // Limpa o campo se estiver com valor
-        if (input.value && input.value.length > 0) {{
-            input.value = '';
-        }}
-        
-        // Configura evento para limpar campo quando ganha foco
-        input.addEventListener('focus', function() {{
-            if (this.value) {{
-                this.value = '';
-            }}
-        }});
-    }}
-}}
-
-// Executa imediatamente se a página já carregou
-if (document.readyState === 'complete') {{
-    setupInputFocus();
-}} else {{
-    document.addEventListener('DOMContentLoaded', setupInputFocus);
-}}
-
-// Observa mudanças no DOM para manter o foco
-const observer = new MutationObserver((mutations) => {{
-    mutations.forEach((mutation) => {{
-        if (!mutation.addedNodes) return;
-        setupInputFocus();
-    }});
-}});
-
-observer.observe(document.body, {{
-    childList: true,
-    subtree: true
-}});
-
-// Força o foco quando a página ganha visibilidade
-document.addEventListener('visibilitychange', () => {{
-    if (document.visibilityState === 'visible') {{
-        setupInputFocus();
-    }}
-}});
-</script>
-""", unsafe_allow_html=True)
-
-# Exibe mensagens
-if st.session_state.app_data['message']:
-    st.success(st.session_state.app_data['message'])
-    # Limpa a mensagem após exibição
-    st.session_state.app_data['message'] = ''
+components.html(get_input_component(), height=180)
 
 # Botão para finalizar bulto
 if st.session_state.app_data['step'] == 3:
     if st.button("✅ Finalizar Bulto", type="primary", use_container_width=True):
         finalize_bulto()
+        st.rerun()
+
+# Processa entrada do usuário
+if 'FROM_FRAME' in st.session_state:
+    handle_input(st.session_state['FROM_FRAME'])
+    del st.session_state['FROM_FRAME']
+    st.rerun()
 
 # Exibe registros completos
 if not st.session_state.app_data['skus'].empty:
@@ -186,6 +169,7 @@ if not st.session_state.app_data['skus'].empty:
     with cols[0]:
         if st.button("Limpar Registros", type="secondary"):
             st.session_state.app_data['skus'] = pd.DataFrame(columns=['Usuário', 'Bulto', 'SKU', 'Data/Hora'])
+            st.rerun()
     with cols[1]:
         csv = st.session_state.app_data['skus'].to_csv(index=False).encode('utf-8')
         st.download_button(
