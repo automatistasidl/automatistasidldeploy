@@ -342,7 +342,7 @@ elif selecao == "Tabela":
                         smtp.send_message(msg)
 
                     st.success("✅ Planilha enviada com sucesso para o analista!")
-                except Exception as e:More actions
+                except Exception as e:
                     st.error(f"❌ Erro ao enviar planilha: {e}")
 
         if st.button("🧹 Limpar todos os registros", type="secondary", use_container_width=True):
