@@ -380,36 +380,36 @@ elif selecao == "Tabela":
         df_cadastros.to_excel(output, index=False, engine='xlsxwriter')
         dados_excel = output.getvalue()
 
-        col1, col2 = st.columns(2)
-        with col1:
-            st.download_button(
-                label="📥 Baixar planilha Excel",
-                data=dados_excel,
-                file_name=nome_arquivo,
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True
-            )
-        with col2:
-            if st.button("✉️ Enviar planilha para analista", use_container_width=True):
-                try:
-                    remetente = "automatistasidl@gmail.com"
-                    senha = "ydlkjtswplqitwkf"
-                    destinatario = "analista@idl.com"
+        #col1, col2 = st.columns(2)
+        #with col1:
+            #st.download_button(
+                #label="📥 Baixar planilha Excel",
+                #data=dados_excel,
+                #file_name=nome_arquivo,
+                #mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                #use_container_width=True
+            #)
+        #with col2:
+            #if st.button("✉️ Enviar planilha para analista", use_container_width=True):
+                #try:
+                    #remetente = "automatistasidl@gmail.com"
+                    #senha = "ydlkjtswplqitwkf"
+                    #destinatario = "analista@idl.com"
 
-                    msg = EmailMessage()
-                    msg['Subject'] = 'Relatório de Cadastro de Bultos'
-                    msg['From'] = remetente
-                    msg['To'] = destinatario
-                    msg.set_content('Segue em anexo a planilha de cadastro de bultos.')
-                    msg.add_attachment(dados_excel, maintype='application', subtype='vnd.openxmlformats-officedocument.spreadsheetml.sheet', filename=nome_arquivo)
+                    #msg = EmailMessage()
+                    #msg['Subject'] = 'Relatório de Cadastro de Bultos'
+                    #msg['From'] = remetente
+                    #msg['To'] = destinatario
+                    #msg.set_content('Segue em anexo a planilha de cadastro de bultos.')
+                    #msg.add_attachment(dados_excel, maintype='application', subtype='vnd.openxmlformats-officedocument.spreadsheetml.sheet', filename=nome_arquivo)
 
-                    with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
-                        smtp.login(remetente, senha)
-                        smtp.send_message(msg)
+                    #with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+                        #smtp.login(remetente, senha)
+                        #smtp.send_message(msg)
 
-                    st.success("✅ Planilha enviada com sucesso para o analista!")
-                except Exception as e:
-                    st.error(f"❌ Erro ao enviar planilha: {e}")
+                    #st.success("✅ Planilha enviada com sucesso para o analista!")
+                #except Exception as e:
+                    #st.error(f"❌ Erro ao enviar planilha: {e}")
 
         if st.button("🧹 Limpar todos os registros", type="secondary", use_container_width=True):
             st.session_state["cadastros"] = []
