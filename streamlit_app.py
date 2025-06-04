@@ -14,7 +14,8 @@ if 'app_data' not in st.session_state:
         'bulto': '',
         'skus': pd.DataFrame(columns=['Usuário', 'Bulto', 'SKU', 'Data/Hora']),
         'current_skus': [],
-        'message': ''
+        'message': '',
+        'input_value': ''  # Novo estado para armazenar o valor de entrada
     }
 
 # Funções auxiliares
@@ -58,7 +59,7 @@ def finalize_bulto():
         st.session_state.app_data['message'] = f"Bulto {st.session_state.app_data['bulto']} finalizado!"
         st.session_state.app_data['bulto'] = ''
 
-# Componente HTML/JS
+# Componente HTML/JS - Atualizado para comunicação correta
 def get_input_component():
     step = st.session_state.app_data['step']
     message = st.session_state.app_data['message']
@@ -92,10 +93,12 @@ def get_input_component():
     
     // Envia valor para o Streamlit
     function sendValue(value) {{
-        window.parent.postMessage({{
-            type: 'FROM_FRAME',
-            data: value
-        }}, '*');
+        const data = {{
+            input_value: value
+        }};
+        window.parent.document.dispatchEvent(
+            new CustomEvent("SET_INPUT_VALUE", {{ detail: data }})
+        );
     }}
     
     // Evento de tecla
@@ -121,6 +124,21 @@ def get_input_component():
     """
     return html
 
+# Listener para eventos personalizados
+components.html(
+    """
+    <script>
+    window.addEventListener("load", function() {
+        window.parent.document.addEventListener("SET_INPUT_VALUE", function(e) {
+            const data = e.detail;
+            Streamlit.setComponentValue(data.input_value);
+        });
+    });
+    </script>
+    """, 
+    height=0
+)
+
 # Interface principal
 st.title("📦 Sistema de Registro de Bultos")
 
@@ -136,19 +154,19 @@ with st.expander("Progresso Atual", expanded=True):
             st.write(f"- {sku}")
 
 # Componente de entrada
-components.html(get_input_component(), height=180)
+input_value = components.html(get_input_component(), height=180)
+
+# Processa entrada do usuário
+if input_value:
+    handle_input(input_value)
+    st.session_state.app_data['input_value'] = input_value
+    st.rerun()
 
 # Botão para finalizar bulto
 if st.session_state.app_data['step'] == 3:
     if st.button("✅ Finalizar Bulto", type="primary", use_container_width=True):
         finalize_bulto()
         st.rerun()
-
-# Processa entrada do usuário
-if 'FROM_FRAME' in st.session_state:
-    handle_input(st.session_state['FROM_FRAME'])
-    del st.session_state['FROM_FRAME']
-    st.rerun()
 
 # Exibe registros completos
 if not st.session_state.app_data['skus'].empty:
