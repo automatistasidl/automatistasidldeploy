@@ -75,7 +75,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Função para foco automático com identificação específica
+# Função para foco automático corrigida
 def auto_focus_input():
     components.html(f"""
     <script>
@@ -92,9 +92,8 @@ def auto_focus_input():
             // Destacar visualmente o campo com foco
             targetInput.classList.add('focused-input');
             
-            // Focar e selecionar o conteúdo
+            // Focar sem selecionar o conteúdo
             targetInput.focus();
-            targetInput.select();
             
             // Remover destaque quando o campo perde foco
             targetInput.addEventListener('blur', () => {{
