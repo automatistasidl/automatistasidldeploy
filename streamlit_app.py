@@ -16,16 +16,37 @@ def hora_brasil():
     fuso_brasil = pytz.timezone('America/Sao_Paulo')
     return datetime.now(fuso_brasil).strftime("%d/%m/%Y %H:%M:%S")
 
-# Função para focar em um campo de texto
-def focus_on_input():
+# Função otimizada para focar em campos
+def focus_text_input():
     st_javascript("""
-    setTimeout(() => {
-        const inputs = window.parent.document.querySelectorAll('input[type="text"]');
-        if (inputs.length > 0) {
-            inputs[inputs.length - 1].focus();
-        }
-    }, 100);
+    function focusFirstInput() {
+        setTimeout(() => {
+            const inputs = window.parent.document.querySelectorAll('input[type="text"]');
+            if (inputs.length > 0) {
+                const lastInput = inputs[inputs.length - 1];
+                lastInput.focus();
+                
+                // Rolamos até o elemento para garantir visibilidade
+                lastInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // Adicionamos uma classe para destacar visualmente (opcional)
+                lastInput.classList.add('focused-input');
+                setTimeout(() => lastInput.classList.remove('focused-input'), 1000);
+            }
+        }, 300);
+    }
+    focusFirstInput();
     """)
+
+# Adicionando estilo CSS para o input com foco
+st.markdown("""
+    <style>
+        .focused-input {
+            border: 2px solid #4CAF50 !important;
+            box-shadow: 0 0 10px #4CAF50 !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
 # Inicializar session_state
 if "cadastros" not in st.session_state:
@@ -66,8 +87,8 @@ if not st.session_state["user"]:
         </style>
     """, unsafe_allow_html=True)
 
-    user = st.text_input("Digite seu usuário:")
-    focus_on_input()  # Foco automático no campo de usuário
+    user = st.text_input("Digite seu usuário:", key="user_input")
+    focus_text_input()  # Foco no campo de usuário
     
     st.write(f"Usuário digitado: {user}")
 
@@ -82,14 +103,6 @@ if not st.session_state["user"]:
     st.stop()
 
 # Menu de navegação
-st.markdown("""
-    <style>
-        .css-1omjdxh {
-            color: white !important;
-        }
-    </style>
-""", unsafe_allow_html=True)
-
 selecao = option_menu(
     menu_title="BACKSTOCK",
     options=["Cadastro Bulto", "Tabela", "Home"],
@@ -124,8 +137,8 @@ if selecao == "Cadastro Bulto":
             </style>
         """, unsafe_allow_html=True)
 
-        bulto = st.text_input("Digite o número do bulto:")
-        focus_on_input()  # Foco automático no campo do bulto
+        bulto = st.text_input("Digite o número do bulto:", key="bulto_input")
+        focus_text_input()  # Foco no campo do bulto
         
         if bulto:
             st.session_state["bulto_numero"] = bulto
@@ -165,12 +178,12 @@ if selecao == "Cadastro Bulto":
                     st.success(f"Categoria '{categoria}' selecionada!")
                     st.rerun()
 
-        # Focar no campo SKU após selecionar categoria ou recarregar a página
+        # Campo SKU com foco automático
+        sku = st.text_input("Digite SKU para este bulto:", key=unique_key)
+        
+        # Focar no campo SKU apenas se uma categoria foi selecionada
         if st.session_state.get("categoria_selecionada"):
-            sku = st.text_input("Digite SKU para este bulto:", key=unique_key)
-            focus_on_input()  # Foco automático no campo SKU
-        else:
-            sku = st.text_input("Digite SKU para este bulto:", key=unique_key, disabled=True)
+            focus_text_input()
 
         if "ultimo_sku" not in st.session_state:
             st.session_state["ultimo_sku"] = ""
@@ -194,10 +207,9 @@ if selecao == "Cadastro Bulto":
                 st.session_state["ultimo_sku"] = sku
                 st.rerun()
 
-        st.markdown("---")  # linha de separação opcional
+        st.markdown("---")
         if st.button("✅ Finalizar Bulto", use_container_width=True):
             if st.session_state["cadastros"]:
-                # Filtrar apenas os cadastros do bulto atual
                 bulto_atual = st.session_state["bulto_numero"]
                 df_cadastros = pd.DataFrame([c for c in st.session_state["cadastros"] if c["Bulto"] == bulto_atual])
             
@@ -230,7 +242,6 @@ if selecao == "Cadastro Bulto":
                     st.warning("⚠️ Nenhuma peça cadastrada neste bulto para envio.")
             else:
                 st.warning("⚠️ Nenhuma peça cadastrada até o momento.")    
-            # Remover cadastros do bulto finalizado
             st.session_state["cadastros"] = [c for c in st.session_state["cadastros"] if c["Bulto"] != bulto_atual]
 
             st.success("Bulto finalizado com sucesso!")
@@ -238,7 +249,6 @@ if selecao == "Cadastro Bulto":
             st.session_state["bulto_cadastrado"] = False
             st.session_state["peca_reset_count"] = 0
             st.rerun()
-
 
 # Tabela de peças cadastradas
 elif selecao == "Tabela":
