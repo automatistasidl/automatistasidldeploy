@@ -26,6 +26,50 @@ if "etapa" not in st.session_state:
 # Configuração da página
 st.set_page_config(layout="wide")
 
+# CSS personalizado
+st.markdown("""
+    <style>
+        .css-1omjdxh {
+            color: white !important;
+        }
+        .big-font {
+            font-size: 30px !important;
+            text-align: center;
+            margin: 10px 0;
+        }
+        .category-btn {
+            height: 100px !important;
+            font-size: 24px !important;
+            margin: 10px 0;
+            width: 100%;
+        }
+        .change-btn {
+            background-color: #FFA500 !important;
+            color: white !important;
+            font-weight: bold;
+        }
+        .change-btn:hover {
+            background-color: #FF8C00 !important;
+            border-color: #FF8C00 !important;
+        }
+        .stButton>button {
+            height: 60px !important;
+            font-size: 20px !important;
+        }
+        .footer {
+            position: fixed;
+            bottom: 0;
+            right: 10px;
+            font-size: 12px;
+            text-align: right;
+            background-color: #9DD1F1;
+            color: black;
+            padding: 5px;
+            z-index: 100;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
 # Componente JavaScript para foco automático
 def auto_focus_input():
     components.html("""
@@ -89,29 +133,6 @@ if not st.session_state["user"]:
     st.stop()
 
 # Menu de navegação
-st.markdown("""
-    <style>
-        .css-1omjdxh {
-            color: white !important;
-        }
-        .big-font {
-            font-size: 30px !important;
-            text-align: center;
-            margin: 10px 0;
-        }
-        .category-btn {
-            height: 100px !important;
-            font-size: 24px !important;
-            margin: 10px 0;
-        }
-        .change-btn {
-            background-color: #FFA500 !important;
-            color: white !important;
-            font-weight: bold;
-        }
-    </style>
-""", unsafe_allow_html=True)
-
 selecao = option_menu(
     menu_title="BACKSTOCK",
     options=["Cadastro Bulto", "Tabela", "Home"],
@@ -156,9 +177,8 @@ if selecao == "Cadastro Bulto":
         for i, categoria in enumerate(categorias):
             col = cols[i % 2]
             with col:
-                if st.button(categoria, key=f"cat_{categoria}", use_container_width=True, 
-                            help=f"Selecionar categoria {categoria}", 
-                            classes=["category-btn"]):
+                # Botão corrigido sem o parâmetro classes
+                if st.button(categoria, key=f"cat_{categoria}", use_container_width=True):
                     st.session_state["categoria_selecionada"] = categoria
                     st.session_state.etapa = "sku"
                     st.rerun()
@@ -178,8 +198,7 @@ if selecao == "Cadastro Bulto":
         st.markdown(f"<div class='big-font'>Peças cadastradas: {st.session_state.get('peca_reset_count', 0)}</div>", unsafe_allow_html=True)
         
         # Botão para mudar de categoria
-        if st.button("↩️ Mudar Categoria", key="mudar_categoria", use_container_width=True, type="secondary", 
-                    classes=["change-btn"]):
+        if st.button("↩️ Mudar Categoria", key="mudar_categoria", use_container_width=True, type="secondary"):
             st.session_state.etapa = "categoria"
             st.rerun()
         
@@ -297,19 +316,6 @@ elif selecao == "Tabela":
 
 # Rodapé
 st.markdown("""
-    <style>
-        .footer {
-            position: fixed;
-            bottom: 0;
-            right: 10px;
-            font-size: 12px;
-            text-align: right;
-            background-color: #9DD1F1;
-            color: black;
-            padding: 5px;
-            z-index: 100;
-        }
-    </style>
     <div class="footer">
         Copyright © 2025 Direitos Autorais Desenvolvedor Rogério Ferreira
     </div>
