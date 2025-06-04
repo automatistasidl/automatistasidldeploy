@@ -6,15 +6,17 @@ from datetime import datetime
 if 'skus' not in st.session_state:
     st.session_state.skus = pd.DataFrame(columns=['SKU', 'Data/Hora'])
 
-# Cria um campo de texto no Streamlit
-sku_input = st.text_input(
-    "Digite o SKU e pressione Enter", 
-    placeholder="Ex: ABC12345",
-    key="sku_input"
-)
+# Usamos um formulário para capturar o input e limpar o campo
+with st.form(key='sku_form'):
+    sku_input = st.text_input(
+        "Digite o SKU e pressione Enter", 
+        placeholder="Ex: ABC12345",
+        key="sku_input"
+    )
+    submit_button = st.form_submit_button("Adicionar")
 
-# Quando Enter é pressionado no campo de texto
-if sku_input:
+# Quando o formulário é submetido
+if submit_button and sku_input:
     # Adiciona à tabela
     new_row = pd.DataFrame({
         'SKU': [sku_input],
@@ -22,10 +24,7 @@ if sku_input:
     })
     st.session_state.skus = pd.concat([st.session_state.skus, new_row], ignore_index=True)
     
-    # Limpa o campo usando a abordagem correta
-    st.session_state.sku_input = ""
-    # Força a atualização do componente
-    st.experimental_rerun()
+    # Não precisamos limpar manualmente, o formulário já faz isso
 
 # Exibe a tabela de SKUs
 if not st.session_state.skus.empty:
@@ -43,6 +42,6 @@ if not st.session_state.skus.empty:
     
     if st.button("Limpar Todos os SKUs", type="primary"):
         st.session_state.skus = pd.DataFrame(columns=['SKU', 'Data/Hora'])
-        st.experimental_rerun()
+        st.rerun()
 else:
-    st.info("Nenhum SKU registrado ainda. Digite um SKU acima e pressione Enter.")
+    st.info("Nenhum SKU registrado ainda. Digite um SKU acima e pressione o botão 'Adicionar'.")
