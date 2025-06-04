@@ -10,6 +10,7 @@ import io
 import smtplib
 from email.message import EmailMessage
 import pytz
+import re
 
 def hora_brasil():
     fuso_brasil = pytz.timezone('America/Sao_Paulo')
@@ -72,10 +73,35 @@ st.markdown("""
             border: 3px solid #4A90E2 !important;
             box-shadow: 0 0 10px #4A90E2 !important;
         }
+        .error-message {
+            color: red;
+            font-weight: bold;
+            margin-top: 5px;
+            text-align: center;
+        }
     </style>
 """, unsafe_allow_html=True)
 
-# Função para foco automático com identificação específica
+# Funções de validação
+def validar_usuario(usuario):
+    if len(usuario) != 24:
+        return False, "Usuário deve ter exatamente 24 caracteres, certifique-se de que bipou o usuário corretamente."
+    return True, ""
+
+def validar_bulto(bulto):
+    if len(bulto) != 24:
+        return False, "Bulto deve ter exatamente 24 caracteres"
+    if not bulto.isdigit():
+        return False, "Bulto deve conter apenas números"
+    return True, ""
+
+def validar_sku(sku):
+    if len(sku) != 14:
+        return False, "SKU deve ter exatamente 14 caracteres"
+    if not sku.isdigit():
+        return False, "SKU deve conter apenas números"
+    return True, ""
+
 # Função para foco automático corrigida
 def auto_focus_input():
     components.html(f"""
@@ -93,10 +119,8 @@ def auto_focus_input():
             // Destacar visualmente o campo com foco
             targetInput.classList.add('focused-input');
             
-            // Focar e selecionar o conteúdo
             // Focar sem selecionar o conteúdo
             targetInput.focus();
-            targetInput.select();
             
             // Remover destaque quando o campo perde foco
             targetInput.addEventListener('blur', () => {{
@@ -147,20 +171,38 @@ if not st.session_state["inicio"]:
 # Cadastro obrigatório do usuário
 if "user" not in st.session_state or not st.session_state["user"]:
     st.session_state["user"] = ""
+    st.session_state["user_error"] = ""
 
 if not st.session_state["user"]:
     st.title("Cadastro Obrigatório para continuar o acesso")
 
     # Campo de usuário com foco automático
     user = st.text_input("Digite seu usuário:", key="user_input", placeholder="Digite seu usuário:")
+    user = st.text_input("Digite seu usuário (max 24 caracteres):", 
+                         key="user_input", 
+                         placeholder="Digite seu usuário...",
+                         max_chars=24)
     auto_focus_input()
 
+    # Exibir erro se existir
+    if st.session_state["user_error"]:
+        st.markdown(f'<div class="error-message">{st.session_state["user_error"]}</div>', unsafe_allow_html=True)
+    
     st.write(f"Usuário digitado: {user}")
 
     if user.strip():
         st.session_state["user"] = user.strip()
         st.success(f"Usuário {user} cadastrado com sucesso!")
         st.rerun()
+        valido, mensagem = validar_usuario(user)
+        if valido:
+            st.session_state["user"] = user.strip()
+            st.session_state["user_error"] = ""
+            st.success(f"Usuário {user} cadastrado com sucesso!")
+            st.rerun()
+        else:
+            st.session_state["user_error"] = mensagem
+            st.rerun()
     else:
         st.warning("Por favor, digite um nome de usuário válido.")
 
@@ -182,6 +224,7 @@ if selecao == "Home":
     st.session_state["user"] = ""
     st.session_state["bulto_cadastrado"] = False
     st.session_state.etapa = "bulto"
+    st.session_state["user_error"] = ""
     st.rerun()
 
 # Página de cadastro de bultos
@@ -190,16 +233,37 @@ if selecao == "Cadastro Bulto":
     if st.session_state.etapa == "bulto":
         st.markdown("<h1 style='color:black; text-align: center;'>Cadastro de Bultos</h1>", unsafe_allow_html=True)
         st.markdown("<h2 style='color:black; text-align: center;'>Digite o número do bulto</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='color:black; text-align: center;'>Digite o número do bulto (24 números)</h2>", unsafe_allow_html=True)
 
         bulto = st.text_input("", key="bulto_input", placeholder="Digite o número do bulto...")
+        bulto = st.text_input("", 
+                              key="bulto_input", 
+                              placeholder="Digite o número do bulto...",
+                              max_chars=24)
         auto_focus_input()
 
+        # Validar bulto se foi digitado algo
         if bulto:
             st.session_state["bulto_numero"] = bulto
             st.session_state["bulto_cadastrado"] = True
             st.session_state.etapa = "categoria"
             st.session_state["peca_reset_count"] = 0
             st.rerun()
+            valido, mensagem = validar_bulto(bulto)
+            if valido:
+                st.session_state["bulto_numero"] = bulto
+                st.session_state["bulto_cadastrado"] = True
+                st.session_state.etapa = "categoria"
+                st.session_state["peca_reset_count"] = 0
+                st.session_state["bulto_error"] = ""
+                st.rerun()
+            else:
+                st.session_state["bulto_error"] = mensagem
+                st.rerun()
+        
+        # Exibir erro se existir
+        if "bulto_error" in st.session_state and st.session_state["bulto_error"]:
+            st.markdown(f'<div class="error-message">{st.session_state["bulto_error"]}</div>', unsafe_allow_html=True)
 
     # Etapa 2: Seleção de categoria
     elif st.session_state.etapa == "categoria":
@@ -239,10 +303,18 @@ if selecao == "Cadastro Bulto":
         # Campo para cadastro de SKU
         unique_key = f"sku_input_{st.session_state.get('peca_reset_count', 0)}"
         sku = st.text_input("Digite o SKU:", key=unique_key, placeholder="Bipe o SKU e pressione Enter...")
+        sku = st.text_input("Digite o SKU (14 números):", 
+                            key=unique_key, 
+                            placeholder="Bipe o SKU e pressione Enter...",
+                            max_chars=14)
 
         # Foco automático otimizado
         auto_focus_input()
 
+        # Exibir erro se existir
+        if "sku_error" in st.session_state and st.session_state["sku_error"]:
+            st.markdown(f'<div class="error-message">{st.session_state["sku_error"]}</div>', unsafe_allow_html=True)
+        
         if sku:
             novo_cadastro = {
                 "Usuário": st.session_state["user"],
@@ -254,9 +326,28 @@ if selecao == "Cadastro Bulto":
             st.session_state["cadastros"].append(novo_cadastro)
             st.success(f"Peça '{sku}' cadastrada com sucesso!")
             st.session_state["peca_reset_count"] = st.session_state.get("peca_reset_count", 0) + 1
-
+            
             # Forçar rerun para limpar o campo e aplicar foco novamente
             st.rerun()
+            valido, mensagem = validar_sku(sku)
+            if valido:
+                novo_cadastro = {
+                    "Usuário": st.session_state["user"],
+                    "Bulto": st.session_state["bulto_numero"],
+                    "SKU": sku,
+                    "Categoria": st.session_state["categoria_selecionada"],
+                    "Data/Hora": hora_brasil()
+                }
+                st.session_state["cadastros"].append(novo_cadastro)
+                st.success(f"Peça '{sku}' cadastrada com sucesso!")
+                st.session_state["peca_reset_count"] = st.session_state.get("peca_reset_count", 0) + 1
+                st.session_state["sku_error"] = ""
+                
+                # Forçar rerun para limpar o campo e aplicar foco novamente
+                st.rerun()
+            else:
+                st.session_state["sku_error"] = mensagem
+                st.rerun()
 
         # Botão para finalizar bulto
         if st.button("✅ Finalizar Bulto", key="finalizar_bulto", use_container_width=True, type="primary"):
