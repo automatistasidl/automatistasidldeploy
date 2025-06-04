@@ -6,16 +6,17 @@ from datetime import datetime
 if 'skus' not in st.session_state:
     st.session_state.skus = pd.DataFrame(columns=['SKU', 'Data/Hora'])
 
-# Cria um container para o input
-input_container = st.empty()
-sku_input = input_container.text_input(
-    "Digite o SKU e pressione Enter", 
-    placeholder="Ex: ABC12345",
-    key="sku_input"
-)
+# Usamos um formulário para capturar o input e limpar o campo
+with st.form(key='sku_form'):
+    sku_input = st.text_input(
+        "Digite o SKU e pressione Enter", 
+        placeholder="Ex: ABC12345",
+        key="sku_input"
+    )
+    submit_button = st.form_submit_button("Adicionar")
 
-# Quando Enter é pressionado no campo de texto
-if sku_input:
+# Quando o formulário é submetido
+if submit_button and sku_input:
     # Adiciona à tabela
     new_row = pd.DataFrame({
         'SKU': [sku_input],
@@ -23,12 +24,24 @@ if sku_input:
     })
     st.session_state.skus = pd.concat([st.session_state.skus, new_row], ignore_index=True)
     
-    # Recria o input para limpar o campo
-    sku_input = input_container.text_input(
-        "Digite o SKU e pressione Enter", 
-        placeholder="Ex: ABC12345",
-        key="sku_input_new"
-    )
-    st.rerun()
+    # Não precisamos limpar manualmente, o formulário já faz isso
 
-# Restante do código permanece igual...
+# Exibe a tabela de SKUs
+if not st.session_state.skus.empty:
+    st.write("### SKUs Registrados")
+    st.dataframe(
+        st.session_state.skus,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Data/Hora": st.column_config.DatetimeColumn(
+                format="DD/MM/YYYY HH:mm:ss"
+            )
+        }
+    )
+    
+    if st.button("Limpar Todos os SKUs", type="primary"):
+        st.session_state.skus = pd.DataFrame(columns=['SKU', 'Data/Hora'])
+        st.rerun()
+else:
+    st.info("Nenhum SKU registrado ainda. Digite um SKU acima e pressione o botão 'Adicionar'.")
