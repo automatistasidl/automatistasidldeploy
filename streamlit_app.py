@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-import streamlit.components.v1 as components
 
 # Configuração da página
 st.set_page_config(page_title="Registro de Bultos", page_icon="📦", layout="centered")
@@ -15,21 +14,17 @@ if 'app_data' not in st.session_state:
         'skus': pd.DataFrame(columns=['Usuário', 'Bulto', 'SKU', 'Data/Hora']),
         'current_skus': [],
         'message': '',
-        'input_value': None
+        'input_value': ''
     }
 
 # Funções auxiliares
 def handle_input(value):
-    if value is None:
-        return
-        
-    current_step = st.session_state.app_data['step']
-    
-    if not value or len(str(value)) < 3:
+    if not value or len(value) < 3:
         st.session_state.app_data['message'] = "Mínimo 3 caracteres"
         return
     
-    value = str(value).upper()
+    value = value.upper()
+    current_step = st.session_state.app_data['step']
     
     if current_step == 1:
         st.session_state.app_data['user'] = value
@@ -42,6 +37,9 @@ def handle_input(value):
     elif current_step == 3:
         st.session_state.app_data['current_skus'].append(value)
         st.session_state.app_data['message'] = f"SKU {value} adicionado"
+    
+    # Limpa o input
+    st.session_state.app_data['input_value'] = ''
 
 def finalize_bulto():
     if st.session_state.app_data['current_skus']:
@@ -62,84 +60,6 @@ def finalize_bulto():
         st.session_state.app_data['message'] = f"Bulto {st.session_state.app_data['bulto']} finalizado!"
         st.session_state.app_data['bulto'] = ''
 
-# Componente HTML/JS
-def get_input_component():
-    step = st.session_state.app_data['step']
-    message = st.session_state.app_data['message']
-    
-    placeholders = {
-        1: "Bipe o USUÁRIO e pressione Enter",
-        2: "Bipe o BULTO e pressione Enter",
-        3: "Bipe o SKU e pressione Enter"
-    }
-    
-    html = f"""
-    <div style="text-align: center; margin-bottom: 20px;">
-        <h3 style="color: #333;">{placeholders[step]}</h3>
-        <input id="main_input" type="text" autofocus
-               style="font-size: 18px; padding: 12px 20px; width: 300px;
-                      border: 2px solid #4a90e2; border-radius: 25px;
-                      outline: none; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-                      text-align: center; display: block; margin: 0 auto;" />
-        <div id="message" style="height: 24px; margin-top: 8px; color: green; font-weight: bold;">
-            {message}
-        </div>
-    </div>
-
-    <script>
-    const input = document.getElementById("main_input");
-    
-    function focusInput() {{
-        input.focus();
-    }}
-    
-    function sendValue(value) {{
-        const data = {{
-            input_value: value
-        }};
-        parent.document.dispatchEvent(
-            new CustomEvent("SET_INPUT_VALUE", {{ detail: data }})
-        );
-    }}
-    
-    input.addEventListener("keypress", function(e) {{
-        if (e.key === "Enter") {{
-            const value = this.value.trim();
-            if (value) {{
-                sendValue(value);
-                this.value = "";
-                setTimeout(focusInput, 10);
-            }}
-        }}
-    }});
-    
-    setTimeout(() => {{
-        document.getElementById("message").textContent = "";
-    }}, 3000);
-    
-    focusInput();
-    </script>
-    """
-    return html
-
-# Listener para eventos personalizados
-components.html(
-    """
-    <script>
-    window.addEventListener("load", function() {
-        parent.document.addEventListener("SET_INPUT_VALUE", function(e) {
-            const data = e.detail;
-            window.parent.streamlitCommunication.sendMessage(
-                "SET_INPUT_VALUE", 
-                {input_value: data.input_value}
-            );
-        });
-    });
-    </script>
-    """, 
-    height=0
-)
-
 # Interface principal
 st.title("📦 Sistema de Registro de Bultos")
 
@@ -154,21 +74,56 @@ with st.expander("Progresso Atual", expanded=True):
         for sku in st.session_state.app_data['current_skus']:
             st.write(f"- {sku}")
 
-# Componente de entrada
-components.html(get_input_component(), height=180)
+# Componente de entrada simplificado
+placeholders = {
+    1: "Bipe o USUÁRIO e pressione Enter",
+    2: "Bipe o BULTO e pressione Enter",
+    3: "Bipe o SKU e pressione Enter"
+}
 
-# Processa entrada do usuário
-if 'SET_INPUT_VALUE' in st.session_state:
-    input_value = st.session_state['SET_INPUT_VALUE']['input_value']
-    handle_input(input_value)
-    st.session_state.app_data['input_value'] = input_value
-    st.rerun()
+# Campo de entrada com foco automático
+input_value = st.text_input(
+    placeholders[st.session_state.app_data['step']],
+    value=st.session_state.app_data['input_value'],
+    key='main_input',
+    on_change=lambda: handle_input(st.session_state.main_input),
+    label_visibility='collapsed'
+)
+
+# Script para manter o foco no campo de entrada
+st.markdown("""
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Foca no campo de entrada automaticamente
+    function focusInput() {
+        const input = document.querySelector('input[aria-label="main_input"]');
+        if (input) {
+            input.focus();
+            // Limpa o campo após atualização
+            input.value = '';
+        }
+    }
+    
+    // Foca no campo quando a página carrega
+    focusInput();
+    
+    // Foca no campo quando ocorre uma mudança na página
+    const observer = new MutationObserver(focusInput);
+    observer.observe(document.body, { childList: true, subtree: true });
+});
+</script>
+""", unsafe_allow_html=True)
+
+# Exibe mensagens
+if st.session_state.app_data['message']:
+    st.success(st.session_state.app_data['message'])
+    # Limpa a mensagem após 3 segundos
+    st.session_state.app_data['message'] = ''
 
 # Botão para finalizar bulto
 if st.session_state.app_data['step'] == 3:
     if st.button("✅ Finalizar Bulto", type="primary", use_container_width=True):
         finalize_bulto()
-        st.rerun()
 
 # Exibe registros completos
 if not st.session_state.app_data['skus'].empty:
@@ -189,7 +144,6 @@ if not st.session_state.app_data['skus'].empty:
     with cols[0]:
         if st.button("Limpar Registros", type="secondary"):
             st.session_state.app_data['skus'] = pd.DataFrame(columns=['Usuário', 'Bulto', 'SKU', 'Data/Hora'])
-            st.rerun()
     with cols[1]:
         csv = st.session_state.app_data['skus'].to_csv(index=False).encode('utf-8')
         st.download_button(
