@@ -67,27 +67,48 @@ st.markdown("""
             padding: 5px;
             z-index: 100;
         }
+        /* Estilo para o campo de entrada com foco */
+        .focused-input {
+            border: 3px solid #4A90E2 !important;
+            box-shadow: 0 0 10px #4A90E2 !important;
+        }
     </style>
 """, unsafe_allow_html=True)
 
-# Componente JavaScript para foco automático
+# Componente JavaScript para foco automático com retentativa
 def auto_focus_input():
-    components.html("""
+    components.html(f"""
     <script>
-    function focusLastInput() {
+    function focusSkuInput() {{
         const inputs = Array.from(window.parent.document.querySelectorAll('input[type="text"]'));
-        if (inputs.length > 0) {
+        if (inputs.length > 0) {{
             const lastInput = inputs[inputs.length - 1];
+            
+            // Destacar visualmente o campo com foco
+            lastInput.classList.add('focused-input');
+            
+            // Focar e selecionar o conteúdo
             lastInput.focus();
             lastInput.select();
-        }
-    }
+            
+            // Remover destaque quando o campo perde foco
+            lastInput.addEventListener('blur', () => {{
+                lastInput.classList.remove('focused-input');
+            }});
+        }}
+    }}
     
-    // Foco inicial
-    setTimeout(focusLastInput, 100);
+    // Tentar focar imediatamente
+    focusSkuInput();
     
-    // Foco após qualquer interação
-    document.addEventListener('click', focusLastInput);
+    // Tentar novamente após 300ms (caso o campo ainda não esteja renderizado)
+    setTimeout(focusSkuInput, 300);
+    
+    // Tentar novamente após 800ms (para casos de conexão lenta)
+    setTimeout(focusSkuInput, 800);
+    
+    // Focar novamente quando a página ganhar foco
+    window.addEventListener('focus', focusSkuInput);
     </script>
     """, height=0)
 
@@ -177,7 +198,6 @@ if selecao == "Cadastro Bulto":
         for i, categoria in enumerate(categorias):
             col = cols[i % 2]
             with col:
-                # Botão corrigido sem o parâmetro classes
                 if st.button(categoria, key=f"cat_{categoria}", use_container_width=True):
                     st.session_state["categoria_selecionada"] = categoria
                     st.session_state.etapa = "sku"
@@ -205,6 +225,8 @@ if selecao == "Cadastro Bulto":
         # Campo para cadastro de SKU
         unique_key = f"sku_input_{st.session_state.get('peca_reset_count', 0)}"
         sku = st.text_input("Digite o SKU:", key=unique_key, placeholder="Bipe o SKU e pressione Enter...")
+        
+        # Foco automático otimizado
         auto_focus_input()
         
         if sku:
@@ -218,6 +240,8 @@ if selecao == "Cadastro Bulto":
             st.session_state["cadastros"].append(novo_cadastro)
             st.success(f"Peça '{sku}' cadastrada com sucesso!")
             st.session_state["peca_reset_count"] = st.session_state.get("peca_reset_count", 0) + 1
+            
+            # Forçar rerun para limpar o campo e aplicar foco novamente
             st.rerun()
         
         # Botão para finalizar bulto
