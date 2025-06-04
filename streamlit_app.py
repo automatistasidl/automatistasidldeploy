@@ -15,18 +15,21 @@ if 'app_data' not in st.session_state:
         'skus': pd.DataFrame(columns=['Usuário', 'Bulto', 'SKU', 'Data/Hora']),
         'current_skus': [],
         'message': '',
-        'input_value': ''  # Novo estado para armazenar o valor de entrada
+        'input_value': None
     }
 
 # Funções auxiliares
 def handle_input(value):
+    if value is None:
+        return
+        
     current_step = st.session_state.app_data['step']
     
-    if not value or len(value) < 3:
+    if not value or len(str(value)) < 3:
         st.session_state.app_data['message'] = "Mínimo 3 caracteres"
         return
     
-    value = value.upper()
+    value = str(value).upper()
     
     if current_step == 1:
         st.session_state.app_data['user'] = value
@@ -59,7 +62,7 @@ def finalize_bulto():
         st.session_state.app_data['message'] = f"Bulto {st.session_state.app_data['bulto']} finalizado!"
         st.session_state.app_data['bulto'] = ''
 
-# Componente HTML/JS - Atualizado para comunicação correta
+# Componente HTML/JS
 def get_input_component():
     step = st.session_state.app_data['step']
     message = st.session_state.app_data['message']
@@ -86,22 +89,19 @@ def get_input_component():
     <script>
     const input = document.getElementById("main_input");
     
-    // Foco automático
     function focusInput() {{
         input.focus();
     }}
     
-    // Envia valor para o Streamlit
     function sendValue(value) {{
         const data = {{
             input_value: value
         }};
-        window.parent.document.dispatchEvent(
+        parent.document.dispatchEvent(
             new CustomEvent("SET_INPUT_VALUE", {{ detail: data }})
         );
     }}
     
-    // Evento de tecla
     input.addEventListener("keypress", function(e) {{
         if (e.key === "Enter") {{
             const value = this.value.trim();
@@ -113,12 +113,10 @@ def get_input_component():
         }}
     }});
     
-    // Limpa mensagem após 3 segundos
     setTimeout(() => {{
         document.getElementById("message").textContent = "";
     }}, 3000);
     
-    // Foco inicial
     focusInput();
     </script>
     """
@@ -129,9 +127,12 @@ components.html(
     """
     <script>
     window.addEventListener("load", function() {
-        window.parent.document.addEventListener("SET_INPUT_VALUE", function(e) {
+        parent.document.addEventListener("SET_INPUT_VALUE", function(e) {
             const data = e.detail;
-            Streamlit.setComponentValue(data.input_value);
+            window.parent.streamlitCommunication.sendMessage(
+                "SET_INPUT_VALUE", 
+                {input_value: data.input_value}
+            );
         });
     });
     </script>
@@ -154,10 +155,11 @@ with st.expander("Progresso Atual", expanded=True):
             st.write(f"- {sku}")
 
 # Componente de entrada
-input_value = components.html(get_input_component(), height=180)
+components.html(get_input_component(), height=180)
 
 # Processa entrada do usuário
-if input_value:
+if 'SET_INPUT_VALUE' in st.session_state:
+    input_value = st.session_state['SET_INPUT_VALUE']['input_value']
     handle_input(input_value)
     st.session_state.app_data['input_value'] = input_value
     st.rerun()
