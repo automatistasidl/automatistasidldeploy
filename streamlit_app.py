@@ -1,25 +1,26 @@
 import streamlit as st
 import pandas as pd
-import os
-import datetime
-from streamlit_option_menu import option_menu
-import streamlit.components.v1 as components
 import pytz
 import requests
 from io import StringIO
 import smtplib
 from email.message import EmailMessage
 import io
+from datetime import datetime
+from streamlit_option_menu import option_menu
+import streamlit.components.v1 as components
+import time
 
+# Função para obter data/hora no fuso horário do Brasil
 def hora_brasil():
     fuso_brasil = pytz.timezone('America/Sao_Paulo')
-    return datetime.datetime.now(fuso_brasil).strftime("%d/%m/%Y %H:%M:%S")
+    return datetime.now(fuso_brasil).strftime("%d/%m/%Y %H:%M:%S")
 
 # Função para validar o usuário na planilha do Google Sheets
 def validar_usuario(codigo):
     try:
         # URL da planilha pública
-        url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQT66XECK150fz-NTRkNAEtlmt1sjSnfCHScgYB812JXd7UHs2JadldU5jOnQaZG3MDA95eJdgH5PZE/pub?output=csv"
+        url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQT66XECK150fz-NTRkNAEtlmt1sjSnfCHScgYB812JXd7UHs2JadldU5jOnQaZG3MDA95eJdgH5PZE/pubhtml"
         
         # Carregar os dados
         response = requests.get(url)
@@ -32,9 +33,9 @@ def validar_usuario(codigo):
             st.error("Estrutura da planilha inválida. Verifique as colunas.")
             return None
         
-        # Converter códigos para minúsculas para comparação case-insensitive
-        df['Criptografia'] = df['Criptografia'].astype(str).str.lower().str.strip()
-        codigo = str(codigo).lower().strip()
+        # Normalizar os dados
+        df['Criptografia'] = df['Criptografia'].astype(str).str.strip().str.lower()
+        codigo = str(codigo).strip().lower()
         
         # Verificar se o código existe
         if codigo in df['Criptografia'].values:
@@ -161,7 +162,6 @@ if not st.session_state["inicio"]:
     st.title("SISTEMA DE CONTROLE DE BACKSTOCK")
     if st.button("Iniciar"):
         with st.spinner("Carregando o sistema..."):
-            import time
             time.sleep(2)
         st.success("Sistema carregado com sucesso! Vamos para a tela de usuário.")
         time.sleep(1)
@@ -192,6 +192,7 @@ if not st.session_state["user_code"]:
             st.session_state["user_code"] = codigo_usuario.strip()
             st.session_state["user_name"] = nome_usuario
             st.success(f"Usuário validado: {nome_usuario}")
+            time.sleep(1)
             st.rerun()
         else:
             st.error("❌ Código de acesso inválido. Por favor, tente novamente.")
@@ -302,7 +303,7 @@ if selecao == "Cadastro Bulto":
                 df_cadastros = pd.DataFrame([c for c in st.session_state["cadastros"] if c["Bulto"] == bulto_atual])
 
                 if not df_cadastros.empty:
-                    nome_arquivo = f"cadastro_bulto_{bulto_atual}_{datetime.datetime.now(pytz.timezone('America/Sao_Paulo')).strftime('%d-%m-%Y_%H-%M-%S')}.xlsx"
+                    nome_arquivo = f"cadastro_bulto_{bulto_atual}_{datetime.now(pytz.timezone('America/Sao_Paulo')).strftime('%d-%m-%Y_%H-%M-%S')}.xlsx"
                     output = io.BytesIO()
                     df_cadastros.to_excel(output, index=False, engine='xlsxwriter')
                     dados_excel = output.getvalue()
@@ -345,7 +346,7 @@ elif selecao == "Tabela":
         df_cadastros = pd.DataFrame(st.session_state["cadastros"])
         st.dataframe(df_cadastros, use_container_width=True)
 
-        nome_arquivo = f"cadastro_bultos_{datetime.datetime.now(pytz.timezone('America/Sao_Paulo')).strftime('%d-%m-%Y_%H-%M-%S')}.xlsx"
+        nome_arquivo = f"cadastro_bultos_{datetime.now(pytz.timezone('America/Sao_Paulo')).strftime('%d-%m-%Y_%H-%M-%S')}.xlsx"
         output = io.BytesIO()
         df_cadastros.to_excel(output, index=False, engine='xlsxwriter')
         dados_excel = output.getvalue()
