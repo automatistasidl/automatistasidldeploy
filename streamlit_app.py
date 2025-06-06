@@ -1,20 +1,49 @@
 import streamlit as st
 import pandas as pd
-import pygsheets
 import os
 import datetime
 from streamlit_option_menu import option_menu
 import streamlit.components.v1 as components
-from datetime import datetime
-import io
+import pytz
+import requests
+from io import StringIO
 import smtplib
 from email.message import EmailMessage
-import pytz
-
+import io
 
 def hora_brasil():
     fuso_brasil = pytz.timezone('America/Sao_Paulo')
-    return datetime.now(fuso_brasil).strftime("%d/%m/%Y %H:%M:%S")
+    return datetime.datetime.now(fuso_brasil).strftime("%d/%m/%Y %H:%M:%S")
+
+# Função para validar o usuário na planilha do Google Sheets
+def validar_usuario(codigo):
+    try:
+        # URL da planilha pública
+        url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQT66XECK150fz-NTRkNAEtlmt1sjSnfCHScgYB812JXd7UHs2JadldU5jOnQaZG3MDA95eJdgH5PZE/pub?output=csv"
+        
+        # Carregar os dados
+        response = requests.get(url)
+        response.encoding = 'utf-8'
+        csv_data = StringIO(response.text)
+        df = pd.read_csv(csv_data)
+        
+        # Verificar se a planilha tem as colunas necessárias
+        if 'Criptografia' not in df.columns or 'Usuário' not in df.columns:
+            st.error("Estrutura da planilha inválida. Verifique as colunas.")
+            return None
+        
+        # Converter códigos para minúsculas para comparação case-insensitive
+        df['Criptografia'] = df['Criptografia'].astype(str).str.lower().str.strip()
+        codigo = str(codigo).lower().strip()
+        
+        # Verificar se o código existe
+        if codigo in df['Criptografia'].values:
+            # Retornar o nome do usuário correspondente
+            return df.loc[df['Criptografia'] == codigo, 'Usuário'].values[0]
+        return None
+    except Exception as e:
+        st.error(f"Erro ao validar usuário: {str(e)}")
+        return None
 
 # Inicializar session_state
 if "cadastros" not in st.session_state:
@@ -73,34 +102,8 @@ st.markdown("""
             border: 3px solid #4A90E2 !important;
             box-shadow: 0 0 10px #4A90E2 !important;
         }
-
-
-
-
-
-
     </style>
 """, unsafe_allow_html=True)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 # Função para foco automático corrigida
 def auto_focus_input():
@@ -112,7 +115,7 @@ def auto_focus_input():
         const targetInput = inputs.find(input => 
             input.placeholder === "Bipe o SKU e pressione Enter..." || 
             input.placeholder === "Digite o número do bulto..." ||
-            input.placeholder === "Digite seu usuário:"
+            input.placeholder === "Digite seu código de acesso:"
         );
         
         if (targetInput) {{
@@ -169,38 +172,31 @@ if not st.session_state["inicio"]:
     st.stop()
 
 # Cadastro obrigatório do usuário
-if "user" not in st.session_state or not st.session_state["user"]:
-    st.session_state["user"] = ""
+if "user_code" not in st.session_state or not st.session_state["user_code"]:
+    st.session_state["user_code"] = ""
+    st.session_state["user_name"] = ""
 
-
-if not st.session_state["user"]:
+if not st.session_state["user_code"]:
     st.title("Cadastro Obrigatório para continuar o acesso")
 
     # Campo de usuário com foco automático
-    user = st.text_input("Digite seu usuário:", key="user_input", placeholder="Digite seu usuário:")
-
-
+    codigo_usuario = st.text_input("Digite seu código de acesso:", key="user_input", placeholder="Digite seu código de acesso...")
 
     auto_focus_input()
 
-
-
-
-
-    st.write(f"Usuário digitado: {user}")
-
-    if user.strip():
-        st.session_state["user"] = user.strip()
-        st.success(f"Usuário {user} cadastrado com sucesso!")
-        st.rerun()
-
-
-
-
-
-
+    if codigo_usuario.strip():
+        with st.spinner("Validando código..."):
+            nome_usuario = validar_usuario(codigo_usuario.strip())
+        
+        if nome_usuario:
+            st.session_state["user_code"] = codigo_usuario.strip()
+            st.session_state["user_name"] = nome_usuario
+            st.success(f"Usuário validado: {nome_usuario}")
+            st.rerun()
+        else:
+            st.error("❌ Código de acesso inválido. Por favor, tente novamente.")
     else:
-        st.warning("Por favor, digite um nome de usuário válido.")
+        st.warning("Por favor, digite um código de acesso válido.")
 
     st.image("https://f.hellowork.com/media/123957/1440_960/IDLOGISTICSFRANCE_123957_63809226079153822430064462.jpeg", use_container_width=True)
     st.stop()
@@ -217,10 +213,10 @@ selecao = option_menu(
 # Redireciona para tela de boas-vindas
 if selecao == "Home":
     st.session_state["inicio"] = False
-    st.session_state["user"] = ""
+    st.session_state["user_code"] = ""
+    st.session_state["user_name"] = ""
     st.session_state["bulto_cadastrado"] = False
     st.session_state.etapa = "bulto"
-
     st.rerun()
 
 # Página de cadastro de bultos
@@ -232,10 +228,7 @@ if selecao == "Cadastro Bulto":
 
         bulto = st.text_input("", key="bulto_input", placeholder="Digite o número do bulto...")
 
-
-
         auto_focus_input()
-
 
         if bulto:
             st.session_state["bulto_numero"] = bulto
@@ -243,16 +236,6 @@ if selecao == "Cadastro Bulto":
             st.session_state.etapa = "categoria"
             st.session_state["peca_reset_count"] = 0
             st.rerun()
-
-
-
-
-
-
-
-
-
-
 
     # Etapa 2: Seleção de categoria
     elif st.session_state.etapa == "categoria":
@@ -276,7 +259,7 @@ if selecao == "Cadastro Bulto":
 
         col1, col2, col3 = st.columns(3)
         with col1:
-            st.markdown(f"<div class='big-font'>Usuário: {st.session_state['user']}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='big-font'>Usuário: {st.session_state['user_name']}</div>", unsafe_allow_html=True)
         with col2:
             st.markdown(f"<div class='big-font'>Bulto: {st.session_state['bulto_numero']}</div>", unsafe_allow_html=True)
         with col3:
@@ -293,19 +276,12 @@ if selecao == "Cadastro Bulto":
         unique_key = f"sku_input_{st.session_state.get('peca_reset_count', 0)}"
         sku = st.text_input("Digite o SKU:", key=unique_key, placeholder="Bipe o SKU e pressione Enter...")
 
-
-
-
         # Foco automático otimizado
         auto_focus_input()
 
-
-
-
-
         if sku:
             novo_cadastro = {
-                "Usuário": st.session_state["user"],
+                "Usuário": st.session_state["user_name"],
                 "Bulto": st.session_state["bulto_numero"],
                 "SKU": sku,
                 "Categoria": st.session_state["categoria_selecionada"],
@@ -318,12 +294,6 @@ if selecao == "Cadastro Bulto":
             # Forçar rerun para limpar o campo e aplicar foco novamente
             st.rerun()
 
-
-
-
-
-
-
         # Botão para finalizar bulto
         if st.button("✅ Finalizar Bulto", key="finalizar_bulto", use_container_width=True, type="primary"):
             if st.session_state.get("peca_reset_count", 0) > 0:
@@ -332,7 +302,7 @@ if selecao == "Cadastro Bulto":
                 df_cadastros = pd.DataFrame([c for c in st.session_state["cadastros"] if c["Bulto"] == bulto_atual])
 
                 if not df_cadastros.empty:
-                    nome_arquivo = f"cadastro_bulto_{bulto_atual}_{datetime.now(pytz.timezone('America/Sao_Paulo')).strftime('%d-%m-%Y_%H-%M-%S')}.xlsx"
+                    nome_arquivo = f"cadastro_bulto_{bulto_atual}_{datetime.datetime.now(pytz.timezone('America/Sao_Paulo')).strftime('%d-%m-%Y_%H-%M-%S')}.xlsx"
                     output = io.BytesIO()
                     df_cadastros.to_excel(output, index=False, engine='xlsxwriter')
                     dados_excel = output.getvalue()
@@ -375,41 +345,10 @@ elif selecao == "Tabela":
         df_cadastros = pd.DataFrame(st.session_state["cadastros"])
         st.dataframe(df_cadastros, use_container_width=True)
 
-        nome_arquivo = f"cadastro_bultos_{datetime.now(pytz.timezone('America/Sao_Paulo')).strftime('%d-%m-%Y_%H-%M-%S')}.xlsx"
+        nome_arquivo = f"cadastro_bultos_{datetime.datetime.now(pytz.timezone('America/Sao_Paulo')).strftime('%d-%m-%Y_%H-%M-%S')}.xlsx"
         output = io.BytesIO()
         df_cadastros.to_excel(output, index=False, engine='xlsxwriter')
         dados_excel = output.getvalue()
-
-        #col1, col2 = st.columns(2)
-        #with col1:
-            #st.download_button(
-                #label="📥 Baixar planilha Excel",
-                #data=dados_excel,
-                #file_name=nome_arquivo,
-                #mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                #use_container_width=True
-            #)
-        #with col2:
-            #if st.button("✉️ Enviar planilha para analista", use_container_width=True):
-                #try:
-                    #remetente = "automatistasidl@gmail.com"
-                    #senha = "ydlkjtswplqitwkf"
-                    #destinatario = "analista@idl.com"
-
-                    #msg = EmailMessage()
-                    #msg['Subject'] = 'Relatório de Cadastro de Bultos'
-                    #msg['From'] = remetente
-                    #msg['To'] = destinatario
-                    #msg.set_content('Segue em anexo a planilha de cadastro de bultos.')
-                    #msg.add_attachment(dados_excel, maintype='application', subtype='vnd.openxmlformats-officedocument.spreadsheetml.sheet', filename=nome_arquivo)
-
-                    #with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
-                        #smtp.login(remetente, senha)
-                        #smtp.send_message(msg)
-
-                    #st.success("✅ Planilha enviada com sucesso para o analista!")
-                #except Exception as e:
-                    #st.error(f"❌ Erro ao enviar planilha: {e}")
 
         if st.button("🧹 Limpar todos os registros", type="secondary", use_container_width=True):
             st.session_state["cadastros"] = []
