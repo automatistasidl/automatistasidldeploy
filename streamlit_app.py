@@ -107,46 +107,37 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Função para foco automático corrigida
-def auto_focus_input():
+def auto_focus_input(placeholder_text="Digite seu código de acesso..."):
     components.html(f"""
     <script>
-    function focusSkuInput() {{
-        // Encontrar o campo pelo placeholder específico
-        const inputs = Array.from(window.parent.document.querySelectorAll('input[type="text"]'));
-        const targetInput = inputs.find(input => 
-            input.placeholder === "Bipe o SKU e pressione Enter..." || 
-            input.placeholder === "Digite o número do bulto..." ||
-            input.placeholder === "Digite seu código de acesso:"
-        );
-        
-        if (targetInput) {{
-            // Destacar visualmente o campo com foco
-            targetInput.classList.add('focused-input');
+    function focusUserInput() {{
+        // Esperar um breve momento para garantir que o DOM esteja pronto
+        setTimeout(() => {{
+            const inputs = Array.from(window.parent.document.querySelectorAll('input[type="text"]'));
+            const targetInput = inputs.find(input => 
+                input.value === "" && 
+                (input.placeholder.includes("{placeholder_text}") || 
+                 input.placeholder.includes("Bipe o SKU") ||
+                 input.placeholder.includes("número do bulto"))
+            );
             
-            // Focar sem selecionar o conteúdo
-            targetInput.focus();
-            
-            // Remover destaque quando o campo perde foco
-            targetInput.addEventListener('blur', () => {{
-                targetInput.classList.remove('focused-input');
-            }});
-        }}
+            if (targetInput) {{
+                // Destacar visualmente o campo com foco
+                targetInput.classList.add('focused-input');
+                targetInput.focus();
+                
+                // Remover destaque quando o campo perde foco
+                targetInput.addEventListener('blur', () => {{
+                    targetInput.classList.remove('focused-input');
+                }});
+            }}
+        }}, 100);
     }}
     
-    // Focar imediatamente
-    focusSkuInput();
+    // Executar imediatamente e também quando houver mudanças
+    focusUserInput();
     
-    // Configurar um observador para quando o DOM for alterado
-    const observer = new MutationObserver((mutations) => {{
-        // Verificar se o campo de input foi adicionado
-        mutations.forEach((mutation) => {{
-            if (mutation.addedNodes.length) {{
-                focusSkuInput();
-            }}
-        }});
-    }});
-    
-    // Iniciar a observação
+    const observer = new MutationObserver(focusUserInput);
     observer.observe(window.parent.document.body, {{
         childList: true,
         subtree: true
@@ -182,7 +173,7 @@ if not st.session_state["user_code"]:
     # Campo de usuário com foco automático
     codigo_usuario = st.text_input("Digite seu código de acesso:", key="user_input", placeholder="Digite seu código de acesso...")
 
-    auto_focus_input()
+    auto_focus_input("Digite seu código de acesso...")
 
     if codigo_usuario.strip():
         with st.spinner("Validando código..."):
