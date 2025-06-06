@@ -20,7 +20,7 @@ def hora_brasil():
 def validar_usuario(codigo):
     try:
         # URL da planilha pública
-        url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQT66XECK150fz-NTRkNAEtlmt1sjSnfCHScgYB812JXd7UHs2JadldU5jOnQaZG3MDA95eJdgH5PZE/pubhtml"
+        url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQT66XECK150fz-NTRkNAEtlmt1sjSnfCHScgYB812JXd7UHs2JadldU5jOnQaZG3MDA95eJdgH5PZE/pub?output=csv"
         
         # Carregar os dados
         response = requests.get(url)
